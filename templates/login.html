@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Sanchaya</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4318FF;
+            --primary-light: #E9E3FF;
+            --secondary: #A3AED0;
+            --bg-main: #F4F7FE;
+            --bg-card: #FFFFFF;
+            --text-main: #2B3674;
+            --text-muted: #A3AED0;
+            --border: #E2E8F0;
+            --font-family: 'Inter', sans-serif;
+            --radius: 20px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: var(--font-family);
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        .split-container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+
+        .branding-side {
+            flex: 1;
+            background: linear-gradient(135deg, #4318FF 0%, #8A2BE2 100%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .branding-logo {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+
+        .branding-title {
+            font-size: 48px;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .branding-quote {
+            font-size: 24px;
+            font-weight: 500;
+            max-width: 80%;
+            line-height: 1.5;
+            opacity: 0.9;
+        }
+
+        .auth-side {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--bg-main);
+            position: relative;
+        }
+
+        .auth-card {
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 40px;
+            width: 100%;
+            max-width: 450px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        .auth-card h2 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: var(--text-main);
+        }
+
+        .auth-card p {
+            color: var(--text-muted);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-light);
+        }
+
+        .btn-primary {
+            width: 100%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(67, 24, 255, 0.3);
+        }
+
+        .auth-links {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        .auth-links a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .auth-links a:hover {
+            text-decoration: underline;
+        }
+
+        /* Form states */
+        .auth-form {
+            display: none;
+            animation: fadeIn 0.4s ease-in-out;
+        }
+
+        .auth-form.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .split-container {
+                flex-direction: column;
+            }
+            .branding-side {
+                flex: 0.4;
+            }
+            .auth-side {
+                flex: 0.6;
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="split-container">
+        <!-- Left Side: Branding -->
+        <div class="branding-side">
+            <div class="branding-logo">
+                <i class="fa-solid fa-wallet"></i>
+            </div>
+            <div class="branding-title">Sanchaya</div>
+            <div class="branding-quote">
+                "Plan better, save more, and spend wisely."
+            </div>
+        </div>
+
+        <!-- Right Side: Authentication -->
+        <div class="auth-side">
+            <div class="auth-card">
+                
+                <!-- Login Form -->
+                <div id="form-login" class="auth-form active">
+                    <h2>Welcome Back</h2>
+                    <p>Enter your details to access your account.</p>
+                    <form onsubmit="event.preventDefault(); doLogin();">
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" id="login-username" class="form-control" placeholder="Enter your username" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="login-password" class="form-control" placeholder="Enter your password" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Sign In</button>
+                    </form>
+                    <div class="auth-links">
+                        <p style="margin-bottom: 10px;"><a onclick="switchForm('form-forgot')">Forgot Password?</a></p>
+                        <p>Don't have an account? <a onclick="switchForm('form-register')">Create one now</a></p>
+                    </div>
+                </div>
+
+                <!-- Register Form -->
+                <div id="form-register" class="auth-form">
+                    <h2>Create Account</h2>
+                    <p>Start managing your finances today.</p>
+                    <form onsubmit="event.preventDefault(); doRegister();">
+                        <div class="form-group">
+                            <label>Choose a Username</label>
+                            <input type="text" id="reg-username" class="form-control" placeholder="Create a username" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="reg-password" class="form-control" placeholder="Create a password" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Sign Up</button>
+                    </form>
+                    <div class="auth-links">
+                        <p>Already have an account? <a onclick="switchForm('form-login')">Sign In</a></p>
+                    </div>
+                </div>
+
+                <!-- Forgot Password Form -->
+                <div id="form-forgot" class="auth-form">
+                    <h2>Reset Password</h2>
+                    <p>Enter your new password to regain access.</p>
+                    <form onsubmit="event.preventDefault(); doResetPassword();">
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" id="reset-username" class="form-control" placeholder="Your username" required>
+                        </div>
+                        <div class="form-group">
+                            <label>New Password</label>
+                            <input type="password" id="reset-password" class="form-control" placeholder="Enter new password" required>
+                        </div>
+                        <button type="submit" class="btn-primary">Reset Password</button>
+                    </form>
+                    <div class="auth-links">
+                        <p>Remembered? <a onclick="switchForm('form-login')">Back to Sign In</a></p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchForm(formId) {
+            document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+            document.getElementById(formId).classList.add('active');
+        }
+
+        async function doLogin() {
+            const username = document.getElementById('login-username').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+                
+                if (res.ok) {
+                    // Save session details
+                    localStorage.setItem('userId', data.user_id);
+                    localStorage.setItem('userName', data.username);
+                    window.location.href = '/'; // Redirect to dashboard
+                } else {
+                    alert(data.message || 'Login failed');
+                }
+            } catch (error) {
+                console.error("Login error:", error);
+                alert("An error occurred during login.");
+            }
+        }
+
+        async function doRegister() {
+            const username = document.getElementById('reg-username').value;
+            const password = document.getElementById('reg-password').value;
+
+            try {
+                const res = await fetch('/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert("Account created successfully! Please sign in.");
+                    switchForm('form-login');
+                    document.getElementById('login-username').value = username;
+                    document.getElementById('login-password').value = '';
+                } else {
+                    alert(data.error || 'Registration failed');
+                }
+            } catch (error) {
+                console.error("Register error:", error);
+                alert("An error occurred during registration.");
+            }
+        }
+
+        async function doResetPassword() {
+            const username = document.getElementById('reset-username').value;
+            const new_password = document.getElementById('reset-password').value;
+
+            try {
+                const res = await fetch('/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, new_password })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    alert("Password reset successfully! Please sign in with your new password.");
+                    switchForm('form-login');
+                    document.getElementById('login-username').value = username;
+                    document.getElementById('login-password').value = '';
+                } else {
+                    alert(data.error || 'Reset failed');
+                }
+            } catch (error) {
+                console.error("Reset error:", error);
+                alert("An error occurred during password reset.");
+            }
+        }
+    </script>
+</body>
+</html>

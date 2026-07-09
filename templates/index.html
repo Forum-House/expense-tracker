@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanchaya - Personal Finance Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
+    <script>
+        // Apply theme early to prevent flickering
+        const savedTheme = localStorage.getItem('userTheme');
+        if (savedTheme && savedTheme !== 'light') {
+            document.documentElement.classList.add(`theme-${savedTheme}`); // fallback to html if body not parsed
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const userName = localStorage.getItem('userName');
+            if (userName) {
+                document.getElementById('topbar-username').textContent = userName;
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <script>
+        if (savedTheme && savedTheme !== 'light') {
+            document.body.classList.add(`theme-${savedTheme}`);
+        }
+    </script>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-wallet"></i>
+                <h2>Sanchaya</h2>
+            </div>
+            <nav>
+                <a href="/" class="active" data-i18n="nav_dashboard"><i class="fa-solid fa-chart-pie"></i> <span class="i18n-text">Dashboard</span></a>
+                <a href="/transactions" data-i18n="nav_transactions"><i class="fa-solid fa-money-bill-transfer"></i> <span class="i18n-text">Transactions</span></a>
+                <a href="/calendar" data-i18n="nav_calendar"><i class="fa-solid fa-calendar-days"></i> <span class="i18n-text">Calendar</span></a>
+                <a href="/reports" data-i18n="nav_reports"><i class="fa-solid fa-chart-line"></i> <span class="i18n-text">Reports</span></a>
+                <a href="/settings" data-i18n="nav_settings"><i class="fa-solid fa-gear"></i> <span class="i18n-text">Settings</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="dashboard-search" placeholder="Search transactions..." data-i18n="search_placeholder">
+                </div>
+                <div class="user-profile">
+                    <div class="avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <span id="topbar-username">Shravani</span>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="header-action">
+                    <h1 data-i18n="dash_title">Dashboard</h1>
+                    <button class="btn-primary" onclick="window.location.href='/transactions'" data-i18n="dash_btn_add_tx"><i class="fa-solid fa-plus"></i> <span class="i18n-text">Add Transaction</span></button>
+                </div>
+
+                <!-- Dynamic Budget Warning Banner Container -->
+                <div id="alert-banner-container"></div>
+
+                <div class="kpi-cards">
+                    <div class="card kpi">
+                        <div class="kpi-icon balance"><i class="fa-solid fa-vault"></i></div>
+                        <div class="kpi-details">
+                            <h3 data-i18n="card_total_balance">Total Balance</h3>
+                            <p id="total-balance">₹0.00</p>
+                        </div>
+                    </div>
+                    <div class="card kpi">
+                        <div class="kpi-icon income"><i class="fa-solid fa-arrow-trend-up"></i></div>
+                        <div class="kpi-details">
+                            <h3 data-i18n="card_total_income">Total Income</h3>
+                            <p id="total-income">₹0.00</p>
+                        </div>
+                    </div>
+                    <div class="card kpi">
+                        <div class="kpi-icon expense"><i class="fa-solid fa-arrow-trend-down"></i></div>
+                        <div class="kpi-details">
+                            <h3 data-i18n="card_total_spent">Total Expenses</h3>
+                            <p id="total-expense">₹0.00</p>
+                        </div>
+                    </div>
+                    <div class="card kpi">
+                        <div class="kpi-icon ratio"><i class="fa-solid fa-percent"></i></div>
+                        <div class="kpi-details">
+                            <h3 data-i18n="card_spending_ratio">Spending Ratio</h3>
+                            <p id="spending-ratio">0%</p>
+                        </div>
+                    </div>
+                </div></div>
+
+                <div class="charts-section">
+                    <div class="card chart-container">
+                        <h2 data-i18n="chart_monthly_spending">Monthly Spending</h2>
+                        <div class="chart-placeholder" style="position: relative; height:250px; width:100%">
+                            <canvas id="spendingChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card recent-transactions">
+                        <h2 data-i18n="recent_activity">Recent Transactions</h2>
+                        <ul id="transaction-list" class="transaction-list">
+                            <li class="tx-item" style="justify-content: center; color: var(--text-muted); border: none;" data-i18n="loading_tx">Loading transactions...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const USER_ID = localStorage.getItem('userId');
+        if (!USER_ID) {
+            window.location.href = '/login_page';
+        }
+
+        async function fetchDashboardData() {
+            try {
+                // Fetch Balance
+                const balanceRes = await fetch(`/get-balance/${USER_ID}`);
+                const balanceData = await balanceRes.json();
+
+                const currencyObj = { 'INR': '₹', 'USD': '$', 'EUR': '€' };
+                const userCurrency = localStorage.getItem('userCurrency') || 'INR';
+                const sym = currencyObj[userCurrency] || '₹';
+
+                document.getElementById('total-balance').textContent = `${sym}${balanceData.current_balance}`;
+                document.getElementById('total-income').textContent = `${sym}${balanceData.total_income}`;
+                document.getElementById('total-expense').textContent = `${sym}${balanceData.total_expense}`;
+
+                // Fetch Budget Status
+                const budgetRes = await fetch(`/check-budget/${USER_ID}`);
+                const budgetData = await budgetRes.json();
+                
+                const ratioEl = document.getElementById('spending-ratio');
+                ratioEl.textContent = budgetData.spending_ratio;
+                
+                const kpiCard = ratioEl.closest('.kpi');
+                const bannerContainer = document.getElementById('alert-banner-container');
+                
+                if (budgetData.warning) {
+                    if (kpiCard) kpiCard.classList.add('warning-active');
+                    bannerContainer.innerHTML = `
+                        <div class="budget-alert-banner">
+                            <div class="warning-content">
+                                <i class="fa-solid fa-triangle-exclamation warning-icon"></i>
+                                <div class="warning-text">
+                                    <h4 data-i18n="warn_exceeded">${t('warn_exceeded')}</h4>
+                                    <p>${t('warn_exceeded_desc').replace('$RATIO', `<strong>${budgetData.spending_ratio}</strong>`)}</p>
+                                </div>
+                            </div>
+                            <button class="btn-close-warning" onclick="dismissWarning(this)"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                    `;
+                } else {
+                    if (kpiCard) kpiCard.classList.remove('warning-active');
+                    bannerContainer.innerHTML = '';
+                }
+
+                // Fetch Spending by Month for Chart
+                const chartRes = await fetch(`/spending-by-month/${USER_ID}`);
+                if (chartRes.ok) {
+                    const chartData = await chartRes.json();
+                    const ctx = document.getElementById('spendingChart').getContext('2d');
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: chartData.months,
+                            datasets: [{
+                                label: `${t('chart_spending_label')} (${sym})`,
+                                data: chartData.spending,
+                                borderColor: '#4318FF',
+                                backgroundColor: 'rgba(67, 24, 255, 0.1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: { beginAtZero: true }
+                            }
+                        }
+                    });
+                }
+
+                // Fetch Transactions
+                const txRes = await fetch(`/all-expenses/${USER_ID}`);
+                if (txRes.ok) {
+                    const txData = await txRes.json();
+
+                    const list = document.getElementById('transaction-list');
+                    list.innerHTML = '';
+
+                    if (txData.length === 0) {
+                        list.innerHTML = `<li class="tx-item" style="justify-content: center; color: var(--text-muted); border: none;" data-i18n="no_transactions">${t('no_transactions')}</li>`;
+                    } else {
+                        txData.slice(0, 5).forEach(tx => {
+                            const li = document.createElement('li');
+                            li.className = 'tx-item';
+                            li.innerHTML = `
+                                <div class="tx-info">
+                                    <div class="tx-icon"><i class="fa-solid fa-receipt"></i></div>
+                                    <div>
+                                        <h4>${tx.category}</h4>
+                                        <span class="tx-date">${tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown Date'}</span>
+                                    </div>
+                                </div>
+                                <div class="tx-amount negative">-${sym}${tx.amount}</div>
+                            `;
+                            list.appendChild(li);
+                        });
+                    }
+                }
+
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        }
+
+        function dismissWarning(btn) {
+            const banner = btn.closest('.budget-alert-banner');
+            if (banner) {
+                banner.style.opacity = '0';
+                banner.style.transform = 'translateY(-10px)';
+                setTimeout(() => {
+                    banner.remove();
+                }, 300);
+            }
+        }
+
+        // Live filter search for dashboard transactions
+        document.getElementById('dashboard-search').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase().trim();
+            const items = document.querySelectorAll('#transaction-list .tx-item');
+            let visibleCount = 0;
+            
+            let noResultsEl = document.getElementById('no-search-results');
+            
+            items.forEach(item => {
+                if (item.style.color === 'var(--text-muted)' && (item.textContent.includes('No transactions') || item.textContent.includes('Loading'))) return;
+                
+                const text = item.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    item.style.display = 'flex';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            if (visibleCount === 0 && query !== '') {
+                if (!noResultsEl) {
+                    noResultsEl = document.createElement('li');
+                    noResultsEl.id = 'no-search-results';
+                    noResultsEl.className = 'tx-item';
+                    noResultsEl.style.justifyContent = 'center';
+                    noResultsEl.style.color = 'var(--text-muted)';
+                    noResultsEl.style.border = 'none';
+                    noResultsEl.textContent = 'No matching transactions found';
+                    document.getElementById('transaction-list').appendChild(noResultsEl);
+                }
+            } else {
+                if (noResultsEl) {
+                    noResultsEl.remove();
+                }
+            }
+        });
+
+        window.onload = fetchDashboardData;
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transactions - Sanchaya</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
+    <script>
+        const savedTheme = localStorage.getItem('userTheme');
+        if (savedTheme && savedTheme !== 'light') {
+            document.documentElement.classList.add(`theme-${savedTheme}`);
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const userName = localStorage.getItem('userName');
+            if (userName) {
+                document.getElementById('topbar-username').textContent = userName;
+            }
+        });
+    </script>
+    <style>
+        .forms-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-main);
+            font-size: 14px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 14px;
+            color: var(--text-main);
+            background-color: var(--bg-main);
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn-success {
+            background-color: var(--success);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(5, 205, 153, 0.3);
+        }
+
+        .btn-danger {
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(238, 93, 80, 0.3);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--primary);
+        }
+
+        @media (max-width: 768px) {
+            .forms-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        if (savedTheme && savedTheme !== 'light') {
+            document.body.classList.add(`theme-${savedTheme}`);
+        }
+    </script>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-wallet"></i>
+                <h2>Sanchaya</h2>
+            </div>
+            <nav>
+                <a href="/" data-i18n="nav_dashboard"><i class="fa-solid fa-chart-pie"></i> <span class="i18n-text">Dashboard</span></a>
+                <a href="/transactions" class="active" data-i18n="nav_transactions"><i class="fa-solid fa-money-bill-transfer"></i> <span class="i18n-text">Transactions</span></a>
+                <a href="/calendar" data-i18n="nav_calendar"><i class="fa-solid fa-calendar-days"></i> <span class="i18n-text">Calendar</span></a>
+                <a href="/reports" data-i18n="nav_reports"><i class="fa-solid fa-chart-line"></i> <span class="i18n-text">Reports</span></a>
+                <a href="/settings" data-i18n="nav_settings"><i class="fa-solid fa-gear"></i> <span class="i18n-text">Settings</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Search transactions..." data-i18n="search_placeholder">
+                </div>
+                <div class="user-profile">
+                    <div class="avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <span id="topbar-username">Shravani</span>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="header-action">
+                    <h1 data-i18n="tx_title">Add Transactions</h1>
+                </div>
+
+                <div class="forms-container">
+                    <!-- Add Income Card -->
+                    <div class="card">
+                        <h2 style="margin-bottom: 20px; color: var(--success);" data-i18n="tx_card_income"><i class="fa-solid fa-arrow-trend-up"></i> Add Money (Income)</h2>
+                        <form id="income-form">
+                            <div class="form-group">
+                                <label for="income-source" data-i18n="tx_source">Source</label>
+                                <input type="text" id="income-source" class="form-control" placeholder="e.g., Salary, Freelance" data-i18n="tx_source_placeholder" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="income-amount" id="label-income-amount" data-i18n="tx_amount">Amount (₹)</label>
+                                <input type="number" id="income-amount" class="form-control" placeholder="0.00" step="0.01" required>
+                            </div>
+                            <button type="submit" class="btn-success" data-i18n="tx_btn_add_income">Add Income</button>
+                        </form>
+                    </div>
+
+                    <!-- Add Expense Card -->
+                    <div class="card">
+                        <h2 style="margin-bottom: 20px; color: var(--danger);" data-i18n="tx_card_expense"><i class="fa-solid fa-arrow-trend-down"></i> Add Expense (Spent)</h2>
+                        <form id="expense-form">
+                            <div class="form-group">
+                                <label for="expense-category" data-i18n="tx_category">Category</label>
+                                <select id="expense-category" class="form-control" required>
+                                    <option value="" disabled selected data-i18n="tx_select_category">Select a category</option>
+                                    <option value="Food & Dining" data-i18n="Food & Dining">Food & Dining</option>
+                                    <option value="Shopping" data-i18n="Shopping">Shopping</option>
+                                    <option value="Transport" data-i18n="Transport">Transport</option>
+                                    <option value="Bills & Utilities" data-i18n="Bills & Utilities">Bills & Utilities</option>
+                                    <option value="Entertainment" data-i18n="Entertainment">Entertainment</option>
+                                    <option value="custom">+ Add New Category...</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="custom-category-group" style="display: none;">
+                                <label for="custom-category" data-i18n="tx_custom_category">New Category Name</label>
+                                <input type="text" id="custom-category" class="form-control" placeholder="Enter category name" data-i18n="tx_custom_placeholder">
+                            </div>
+                            <div class="form-group">
+                                <label for="expense-amount" id="label-expense-amount" data-i18n="tx_amount">Amount (₹)</label>
+                                <input type="number" id="expense-amount" class="form-control" placeholder="0.00" step="0.01" required>
+                            </div>
+                            <div class="form-group checkbox-group">
+                                <input type="checkbox" id="expense-bill">
+                                <label for="expense-bill" style="margin-bottom: 0;" data-i18n="tx_recurring_bill">Is this a recurring bill?</label>
+                            </div>
+                            <button type="submit" class="btn-danger" data-i18n="tx_btn_add_expense">Add Expense</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const USER_ID = localStorage.getItem('userId');
+        if (!USER_ID) {
+            window.location.href = '/login_page';
+        }
+        const currencyObj = { 'INR': '₹', 'USD': '$', 'EUR': '€' };
+        const userCurrency = localStorage.getItem('userCurrency') || 'INR';
+        const sym = currencyObj[userCurrency] || '₹';
+        document.getElementById('label-income-amount').textContent = `Amount (${sym})`;
+        document.getElementById('label-expense-amount').textContent = `Amount (${sym})`;
+
+        function showToast(title, message, type = 'success') {
+            let toastContainer = document.getElementById('toast-container');
+            if (!toastContainer) {
+                toastContainer = document.createElement('div');
+                toastContainer.id = 'toast-container';
+                toastContainer.className = 'toast-container';
+                document.body.appendChild(toastContainer);
+            }
+            
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
+            
+            const icon = type === 'success' ? 'fa-circle-check' : 'fa-triangle-exclamation';
+            
+            toast.innerHTML = `
+                <i class="fa-solid ${icon} toast-icon"></i>
+                <div class="toast-content">
+                    <h4>${title}</h4>
+                    <p>${message}</p>
+                </div>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateX(20px)';
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 5000);
+        }
+
+        document.getElementById('income-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const source = document.getElementById('income-source').value;
+            const amount = parseFloat(document.getElementById('income-amount').value);
+
+            try {
+                const res = await fetch('/add-income', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: USER_ID, source, amount })
+                });
+
+                if (res.ok) {
+                    showToast('Success!', 'Income added successfully!', 'success');
+                    document.getElementById('income-form').reset();
+                } else {
+                    const data = await res.json();
+                    showToast('Error', data.error || data.message, 'warning');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Error', 'Failed to add income.', 'warning');
+            }
+        });
+
+        document.getElementById('expense-category').addEventListener('change', function () {
+            const customGroup = document.getElementById('custom-category-group');
+            const customInput = document.getElementById('custom-category');
+            if (this.value === 'custom') {
+                customGroup.style.display = 'block';
+                customInput.required = true;
+                customInput.focus();
+            } else {
+                customGroup.style.display = 'none';
+                customInput.required = false;
+                customInput.value = '';
+            }
+        });
+
+        document.getElementById('expense-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            let category = document.getElementById('expense-category').value;
+            if (category === 'custom') {
+                category = document.getElementById('custom-category').value;
+            }
+            const amount = parseFloat(document.getElementById('expense-amount').value);
+            const is_bill = document.getElementById('expense-bill').checked;
+
+            try {
+                const res = await fetch('/add-expense', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: USER_ID, category, amount, is_bill })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    showToast('Success!', `Expense of ${sym}${amount} added successfully!`, 'success');
+                    
+                    if (data.warning) {
+                        setTimeout(() => {
+                            showToast('Budget Alert!', `Warning: Spending has exceeded 90% of your budget (${Math.round(data.ratio * 100)}%)!`, 'warning');
+                        }, 800);
+                    }
+                    
+                    document.getElementById('expense-form').reset();
+                    document.getElementById('custom-category-group').style.display = 'none';
+                    document.getElementById('custom-category').required = false;
+                } else {
+                    const data = await res.json();
+                    showToast('Error', data.error || data.message, 'warning');
+                }
+            } catch (err) {
+                console.error(err);
+                showToast('Error', 'Failed to add expense.', 'warning');
+            }
+        });
+    </script>
+</body>
+
+</html>

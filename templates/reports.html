@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reports - Sanchaya</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
+    <script>
+        const savedTheme = localStorage.getItem('userTheme');
+        if (savedTheme && savedTheme !== 'light') {
+            document.documentElement.classList.add(`theme-${savedTheme}`);
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const userName = localStorage.getItem('userName');
+            if (userName) {
+                document.getElementById('topbar-username').textContent = userName;
+            }
+        });
+    </script>
+    <style>
+        .reports-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .month-selector {
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .month-selector select {
+            padding: 10px 15px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-main);
+            background-color: var(--bg-card);
+            outline: none;
+            cursor: pointer;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .history-list {
+            list-style: none;
+            max-height: 400px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .history-list::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .history-list::-webkit-scrollbar-thumb {
+            background-color: var(--border);
+            border-radius: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .reports-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        if (savedTheme && savedTheme !== 'light') {
+            document.body.classList.add(`theme-${savedTheme}`);
+        }
+    </script>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-wallet"></i>
+                <h2>Sanchaya</h2>
+            </div>
+            <nav>
+                <a href="/" data-i18n="nav_dashboard"><i class="fa-solid fa-chart-pie"></i> <span class="i18n-text">Dashboard</span></a>
+                <a href="/transactions" data-i18n="nav_transactions"><i class="fa-solid fa-money-bill-transfer"></i> <span class="i18n-text">Transactions</span></a>
+                <a href="/calendar" data-i18n="nav_calendar"><i class="fa-solid fa-calendar-days"></i> <span class="i18n-text">Calendar</span></a>
+                <a href="/reports" class="active" data-i18n="nav_reports"><i class="fa-solid fa-chart-line"></i> <span class="i18n-text">Reports</span></a>
+                <a href="/settings" data-i18n="nav_settings"><i class="fa-solid fa-gear"></i> <span class="i18n-text">Settings</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="reports-search" placeholder="Search..." data-i18n="search_placeholder">
+                </div>
+                <div class="user-profile">
+                    <div class="avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <span id="topbar-username">Shravani</span>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="header-action" style="margin-bottom: 10px;">
+                    <h1 data-i18n="rep_title">Reports & Insights</h1>
+                </div>
+
+                <div class="month-selector">
+                    <label for="month-select" style="font-weight: 600;" data-i18n="rep_select_month">Select Month:</label>
+                    <select id="month-select">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+
+                <div class="reports-container">
+                    <!-- Pie Chart Card -->
+                    <div class="card">
+                        <h2 style="margin-bottom: 20px;" data-i18n="rep_breakdown"><i class="fa-solid fa-chart-pie"></i> <span class="i18n-text">Category Breakdown</span></h2>
+                        <div class="chart-container">
+                            <canvas id="categoryPieChart"></canvas>
+                        </div>
+                        <div id="no-data-msg" style="display: none; text-align: center; color: var(--text-muted); margin-top: 20px;" data-i18n="rep_no_spending">
+                            No expenses recorded for this month.
+                        </div>
+                    </div>
+
+                    <!-- History Card -->
+                    <div class="card">
+                        <h2 style="margin-bottom: 20px;" data-i18n="rep_history"><i class="fa-solid fa-clock-rotate-left"></i> <span class="i18n-text">Transaction History</span></h2>
+                        <ul id="history-list" class="history-list transaction-list">
+                            <li class="tx-item" style="justify-content: center; color: var(--text-muted); border: none;" data-i18n="loading_tx">Loading history...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const USER_ID = localStorage.getItem('userId');
+        if (!USER_ID) {
+            window.location.href = '/login_page';
+        }
+        let pieChart = null;
+
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        // Colors for the pie chart
+        const categoryColors = {
+            'Food & Dining': '#FF6384',
+            'Shopping': '#36A2EB',
+            'Transport': '#FFCE56',
+            'Bills & Utilities': '#4BC0C0',
+            'Entertainment': '#9966FF',
+            'Other': '#C9CBCF'
+        };
+
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        async function loadReportData(month = null, year = null) {
+            try {
+                let url = `/api/reports/${USER_ID}`;
+                if (month !== null && year !== null) {
+                    url += `?month=${month}&year=${year}`;
+                }
+
+                const res = await fetch(url);
+                const data = await res.json();
+
+                if (!res.ok) {
+                    console.error("Error fetching report data:", data.error);
+                    return;
+                }
+
+                // 1. Populate Dropdown if it's the first load
+                const select = document.getElementById('month-select');
+                if (select.options.length <= 1 && select.options[0].value === "") {
+                    select.innerHTML = ''; // Clear loading
+
+                    if (data.available_months.length === 0) {
+                        select.innerHTML = `<option value="">No data available</option>`;
+                    } else {
+                        data.available_months.forEach(m => {
+                            const option = document.createElement('option');
+                            option.value = `${m.month}-${m.year}`;
+                            option.textContent = `${monthNames[m.month - 1]} ${m.year}`;
+                            if (m.month === data.current_selection.month && m.year === data.current_selection.year) {
+                                option.selected = true;
+                            }
+                            select.appendChild(option);
+                        });
+                    }
+                }
+
+                // 2. Render Pie Chart
+                const chartCanvas = document.getElementById('categoryPieChart');
+                const noDataMsg = document.getElementById('no-data-msg');
+
+                if (data.breakdown.length === 0) {
+                    chartCanvas.style.display = 'none';
+                    noDataMsg.style.display = 'block';
+                } else {
+                    chartCanvas.style.display = 'block';
+                    noDataMsg.style.display = 'none';
+
+                    const labels = data.breakdown.map(b => b.category);
+                    const amounts = data.breakdown.map(b => parseFloat(b.amount));
+                    const bgColors = labels.map(label => categoryColors[label] || getRandomColor());
+
+                    if (pieChart) {
+                        pieChart.destroy();
+                    }
+
+                    const ctx = chartCanvas.getContext('2d');
+                    pieChart = new Chart(ctx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                data: amounts,
+                                backgroundColor: bgColors,
+                                borderWidth: 0,
+                                hoverOffset: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: {
+                                        padding: 20,
+                                        font: { family: "'Inter', sans-serif", size: 13 }
+                                    }
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function (context) {
+                                            let label = context.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            if (context.parsed !== null) {
+                                                const currencyObj = { 'INR': '₹', 'USD': '$', 'EUR': '€' };
+                                                const userCurrency = localStorage.getItem('userCurrency') || 'INR';
+                                                const sym = currencyObj[userCurrency] || '₹';
+                                                label += sym + context.parsed.toFixed(2);
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            },
+                            cutout: '65%'
+                        }
+                    });
+                }
+
+                // 3. Render History List
+                const list = document.getElementById('history-list');
+                list.innerHTML = '';
+
+                if (data.history.length === 0) {
+                    list.innerHTML = `<li class="tx-item" style="justify-content: center; color: var(--text-muted); border: none;" data-i18n="rep_no_tx">${t('rep_no_tx')}</li>`;
+                } else {
+                    const currencyObj = { 'INR': '₹', 'USD': '$', 'EUR': '€' };
+                    const userCurrency = localStorage.getItem('userCurrency') || 'INR';
+                    const sym = currencyObj[userCurrency] || '₹';
+                    data.history.forEach(tx => {
+                        const li = document.createElement('li');
+                        li.className = 'tx-item';
+                        
+                        const isIncome = tx.type === 'income';
+                        const icon = isIncome ? 'fa-wallet' : 'fa-receipt';
+                        const amtClass = isIncome ? 'positive' : 'negative';
+                        const sign = isIncome ? '+' : '-';
+                        
+                        li.innerHTML = `
+                            <div class="tx-info">
+                                <div class="tx-icon" style="${isIncome ? 'color: var(--success); background-color: #E2FFED;' : ''}"><i class="fa-solid ${icon}"></i></div>
+                                <div>
+                                    <h4>${tx.name}</h4>
+                                    <span class="tx-date">${tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown Date'}</span>
+                                </div>
+                            </div>
+                            <div class="tx-amount ${amtClass}">${sign}${sym}${tx.amount.toFixed(2)}</div>
+                        `;
+                        list.appendChild(li);
+                    });
+                }
+
+            } catch (err) {
+                console.error("Error loading reports:", err);
+            }
+        }
+
+        document.getElementById('month-select').addEventListener('change', (e) => {
+            const val = e.target.value;
+            if (val) {
+                const [m, y] = val.split('-');
+                loadReportData(parseInt(m), parseInt(y));
+            }
+        });
+
+        // Live search filter for reports history transactions
+        document.getElementById('reports-search').addEventListener('input', function(e) {
+            const query = e.target.value.toLowerCase().trim();
+            const items = document.querySelectorAll('#history-list .tx-item');
+            let visibleCount = 0;
+            
+            let noResultsEl = document.getElementById('no-search-results');
+            
+            items.forEach(item => {
+                if (item.style.color === 'var(--text-muted)' && (item.textContent.includes('No transactions') || item.textContent.includes('Loading'))) return;
+                
+                const text = item.textContent.toLowerCase();
+                if (text.includes(query)) {
+                    item.style.display = 'flex';
+                    visibleCount++;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+            
+            if (visibleCount === 0 && query !== '') {
+                if (!noResultsEl) {
+                    noResultsEl = document.createElement('li');
+                    noResultsEl.id = 'no-search-results';
+                    noResultsEl.className = 'tx-item';
+                    noResultsEl.style.justifyContent = 'center';
+                    noResultsEl.style.color = 'var(--text-muted)';
+                    noResultsEl.style.border = 'none';
+                    noResultsEl.textContent = 'No matching transactions found';
+                    document.getElementById('history-list').appendChild(noResultsEl);
+                }
+            } else {
+                if (noResultsEl) {
+                    noResultsEl.remove();
+                }
+            }
+        });
+
+        // Initial load
+        window.onload = () => loadReportData();
+
+    </script>
+</body>
+
+</html>

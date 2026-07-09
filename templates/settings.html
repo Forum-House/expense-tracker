@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Sanchaya</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
+    <style>
+        .settings-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .settings-card {
+            background-color: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 12px var(--shadow-color);
+        }
+
+        .settings-card h2 {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            color: var(--text-dark);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Toggle Switch */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked+.slider {
+            background-color: var(--primary);
+        }
+
+        input:checked+.slider:before {
+            transform: translateX(26px);
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .btn-danger {
+            background-color: #EF4444;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-danger:hover {
+            background-color: #DC2626;
+        }
+
+        .btn-save {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard">
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-wallet"></i>
+                <h2>Sanchaya</h2>
+            </div>
+            <nav>
+                <a href="/" data-i18n="nav_dashboard"><i class="fa-solid fa-chart-pie"></i> <span class="i18n-text">Dashboard</span></a>
+                <a href="/transactions" data-i18n="nav_transactions"><i class="fa-solid fa-money-bill-transfer"></i> <span class="i18n-text">Transactions</span></a>
+                <a href="/calendar" data-i18n="nav_calendar"><i class="fa-solid fa-calendar-days"></i> <span class="i18n-text">Calendar</span></a>
+                <a href="/reports" data-i18n="nav_reports"><i class="fa-solid fa-chart-line"></i> <span class="i18n-text">Reports</span></a>
+                <a href="/settings" class="active" data-i18n="nav_settings"><i class="fa-solid fa-gear"></i> <span class="i18n-text">Settings</span></a>
+            </nav>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Search..." data-i18n="search_placeholder">
+                </div>
+                <div class="user-profile">
+                    <div class="avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <span id="topbar-username">User</span>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="header-action">
+                    <h1 data-i18n="set_title">Settings</h1>
+                    <button class="btn-danger" onclick="logout()" data-i18n="logout_btn"><i class="fa-solid fa-right-from-bracket"></i> <span class="i18n-text">Logout</span></button>
+                </div>
+
+                <div class="settings-container">
+                    <!-- Profile Form -->
+                    <div class="settings-card">
+                        <h2 data-i18n="set_profile"><i class="fa-regular fa-id-badge"></i> <span class="i18n-text">Profile Details</span></h2>
+                        <form id="profile-form">
+                            <div class="form-group">
+                                <label data-i18n="set_name">Name</label>
+                                <input type="text" id="set-username" placeholder="Enter your name" data-i18n="set_placeholder_name">
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div class="form-group">
+                                    <label data-i18n="set_age">Age</label>
+                                    <input type="number" id="set-age" placeholder="Age">
+                                </div>
+                                <div class="form-group">
+                                    <label data-i18n="set_gender">Gender</label>
+                                    <select id="set-gender">
+                                        <option value="" data-i18n="set_gender_select">Select...</option>
+                                        <option value="Male" data-i18n="set_male">Male</option>
+                                        <option value="Female" data-i18n="set_female">Female</option>
+                                        <option value="Other" data-i18n="set_gender_other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="set_phone">Phone Number</label>
+                                <input type="tel" id="set-phone" placeholder="Phone Number" data-i18n="set_placeholder_phone">
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="set_profession">Profession</label>
+                                <select id="set-profession">
+                                    <option value="" data-i18n="set_profession_select">Select...</option>
+                                    <option value="Student" data-i18n="set_student">Student</option>
+                                    <option value="Working Professional" data-i18n="set_professional">Working Professional</option>
+                                    <option value="Business" data-i18n="set_business">Business</option>
+                                    <option value="Freelancer" data-i18n="set_freelancer">Freelancer</option>
+                                    <option value="Other" data-i18n="set_profession_other">Other</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label data-i18n="set_address">Address</label>
+                                <textarea id="set-address" rows="2" placeholder="Your address" data-i18n="set_placeholder_address"></textarea>
+                            </div>
+                            <div class="action-buttons">
+                                <button type="button" class="btn-save" onclick="saveProfile()" data-i18n="set_save_changes"><i class="fa-solid fa-check"></i> <span class="i18n-text">Save Changes</span></button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div style="display: flex; flex-direction: column; gap: 24px;">
+                        <!-- Preferences Form -->
+                        <div class="settings-card">
+                            <h2 data-i18n="set_preferences"><i class="fa-solid fa-sliders"></i> <span class="i18n-text">Preferences</span></h2>
+                            <form id="preferences-form">
+                                <div class="form-group">
+                                    <label data-i18n="set_language">Language</label>
+                                    <select id="set-language" onchange="applyLanguage(this.value)">
+                                        <option value="English">English</option>
+                                        <option value="Kannada">Kannada (ಕನ್ನಡ)</option>
+                                        <option value="Hindi">Hindi (हिंदी)</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label data-i18n="set_currency">Currency & Country</label>
+                                    <select id="set-currency">
+                                        <option value="INR">Indian Rupee (₹)</option>
+                                        <option value="USD">US Dollar ($)</option>
+                                        <option value="EUR">Euro (€)</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label data-i18n="set_theme">App Theme</label>
+                                    <select id="set-theme" onchange="applyTheme(this.value)">
+                                        <option value="light" data-i18n="set_theme_light">Light Mode (Default)</option>
+                                        <option value="dark" data-i18n="set_theme_dark">Dark Mode</option>
+                                        <option value="blue" data-i18n="set_theme_blue">Ocean Blue</option>
+                                        <option value="green" data-i18n="set_theme_green">Forest Green</option>
+                                    </select>
+                                </div>
+                                <div class="form-group toggle-container">
+                                    <div>
+                                        <label style="margin-bottom: 2px;" data-i18n="set_notifications">Push Notifications</label>
+                                        <span style="font-size: 0.8rem; color: var(--text-muted);" data-i18n="set_notifications_desc">Receive alerts for bills and budget limits</span>
+                                    </div>
+                                    <label class="switch">
+                                        <input type="checkbox" id="set-notifications" checked>
+                                        <span class="slider"></span>
+                                    </label>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Security Form -->
+                        <div class="settings-card">
+                            <h2 data-i18n="set_security"><i class="fa-solid fa-shield-halved"></i> <span class="i18n-text">Security</span></h2>
+                            <form id="security-form" onsubmit="event.preventDefault(); changePassword();">
+                                <div class="form-group">
+                                    <label data-i18n="set_new_password">New Password</label>
+                                    <input type="password" id="new-password" placeholder="Enter new password" data-i18n="set_placeholder_password" required>
+                                </div>
+                                <div class="action-buttons">
+                                    <button type="submit" class="btn-save" data-i18n="set_update_password"><i class="fa-solid fa-key"></i> <span class="i18n-text">Update Password</span></button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-buttons" style="margin-top: 24px; justify-content: flex-start;">
+                    <button class="btn-save" style="padding: 14px 32px; font-size: 1.1rem;" onclick="saveAllSettings()" data-i18n="set_save_all"><i class="fa-solid fa-check"></i> <span class="i18n-text">Save All Settings</span></button>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const USER_ID = localStorage.getItem('userId');
+        if (!USER_ID) {
+            window.location.href = '/login_page';
+        }
+
+        let currentCurrency = 'INR';
+
+        // Load settings when page loads
+        async function loadSettings() {
+            try {
+                const res = await fetch(`/api/settings/${USER_ID}`);
+                if (res.ok) {
+                    const data = await res.json();
+
+                    // Profile
+                    if (data.username) {
+                        document.getElementById('set-username').value = data.username;
+                        document.getElementById('topbar-username').textContent = data.username;
+                        localStorage.setItem('userName', data.username);
+                    }
+                    if (data.age) document.getElementById('set-age').value = data.age;
+                    if (data.gender) document.getElementById('set-gender').value = data.gender;
+                    if (data.phone) document.getElementById('set-phone').value = data.phone;
+                    if (data.profession) document.getElementById('set-profession').value = data.profession;
+                    if (data.address) document.getElementById('set-address').value = data.address;
+
+                    // Preferences
+                    if (data.language) document.getElementById('set-language').value = data.language;
+                    if (data.currency) {
+                        document.getElementById('set-currency').value = data.currency;
+                        currentCurrency = data.currency;
+                        localStorage.setItem('userCurrency', data.currency);
+                    }
+                    if (data.theme) document.getElementById('set-theme').value = data.theme;
+
+                    // The notifications field comes as 1 or 0 (or true/false)
+                    document.getElementById('set-notifications').checked = Boolean(data.notifications);
+
+                    applyTheme(data.theme);
+                }
+            } catch (error) {
+                console.error("Error loading settings:", error);
+            }
+        }
+
+        // Save settings to backend
+        async function saveAllSettings() {
+            const selectedCurrency = document.getElementById('set-currency').value;
+            if (selectedCurrency !== currentCurrency) {
+                const confirmConversion = confirm(`You are changing your currency from ${currentCurrency} to ${selectedCurrency}.\n\nThis will automatically convert all your existing transactions and reminders to ${selectedCurrency} using the latest exchange rates. Do you want to proceed?`);
+                if (!confirmConversion) {
+                    // revert dropdown selection
+                    document.getElementById('set-currency').value = currentCurrency;
+                    return;
+                }
+            }
+
+            const data = {
+                username: document.getElementById('set-username').value,
+                age: document.getElementById('set-age').value,
+                gender: document.getElementById('set-gender').value,
+                phone: document.getElementById('set-phone').value,
+                profession: document.getElementById('set-profession').value,
+                address: document.getElementById('set-address').value,
+                language: document.getElementById('set-language').value,
+                currency: selectedCurrency,
+                theme: document.getElementById('set-theme').value,
+                notifications: document.getElementById('set-notifications').checked
+            };
+
+            try {
+                const res = await fetch(`/api/settings/${USER_ID}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                if (res.ok) {
+                    alert('Settings saved successfully!');
+                    currentCurrency = data.currency;
+                    applyTheme(data.theme);
+                    localStorage.setItem('userCurrency', data.currency);
+                    localStorage.setItem('userLang', data.language);
+                    localStorage.setItem('userName', data.username);
+                    applyLanguage(data.language);
+                    document.getElementById('topbar-username').textContent = data.username;
+                } else {
+                    alert('Failed to save settings.');
+                }
+            } catch (error) {
+                console.error("Error saving:", error);
+                alert('An error occurred while saving.');
+            }
+        }
+
+        async function saveProfile() {
+            // Function specifically to save profile as requested
+            await saveAllSettings();
+        }
+
+        async function changePassword() {
+            const newPassword = document.getElementById('new-password').value;
+            if (!newPassword) return;
+
+            try {
+                const res = await fetch(`/change-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: USER_ID, new_password: newPassword })
+                });
+
+                if (res.ok) {
+                    alert('Password changed successfully!');
+                    document.getElementById('new-password').value = '';
+                } else {
+                    alert('Failed to change password.');
+                }
+            } catch (error) {
+                console.error("Error changing password:", error);
+            }
+        }
+
+        function logout() {
+            if (confirm('Are you sure you want to logout?')) {
+                // Clear session tokens
+                localStorage.removeItem('userId');
+                localStorage.removeItem('userName');
+                localStorage.removeItem('userCurrency');
+                localStorage.removeItem('userTheme');
+                alert('Logged out successfully!');
+                window.location.href = '/login_page'; // Redirect to login
+            }
+        }
+
+        function applyTheme(theme) {
+            document.body.className = ''; // reset
+            if (theme !== 'light') {
+                document.body.classList.add(`theme-${theme}`);
+            }
+            localStorage.setItem('userTheme', theme);
+        }
+
+        window.onload = loadSettings;
+    </script>
+</body>
+
+</html>

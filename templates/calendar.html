@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar - Sanchaya</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        const savedTheme = localStorage.getItem('userTheme');
+        if (savedTheme && savedTheme !== 'light') {
+            document.documentElement.classList.add(`theme-${savedTheme}`);
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const userName = localStorage.getItem('userName');
+            if (userName) {
+                document.getElementById('topbar-username').textContent = userName;
+            }
+        });
+    </script>
+</head>
+
+<body>
+    <script>
+        if (savedTheme && savedTheme !== 'light') {
+            document.body.classList.add(`theme-${savedTheme}`);
+        }
+    </script>
+    <div class="dashboard">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-wallet"></i>
+                <h2>Sanchaya</h2>
+            </div>
+            <nav>
+                <a href="/" data-i18n="nav_dashboard"><i class="fa-solid fa-chart-pie"></i> <span class="i18n-text">Dashboard</span></a>
+                <a href="/transactions" data-i18n="nav_transactions"><i class="fa-solid fa-money-bill-transfer"></i> <span class="i18n-text">Transactions</span></a>
+                <a href="/calendar" class="active" data-i18n="nav_calendar"><i class="fa-solid fa-calendar-days"></i> <span class="i18n-text">Calendar</span></a>
+                <a href="/reports" data-i18n="nav_reports"><i class="fa-solid fa-chart-line"></i> <span class="i18n-text">Reports</span></a>
+                <a href="/settings" data-i18n="nav_settings"><i class="fa-solid fa-gear"></i> <span class="i18n-text">Settings</span></a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <div class="search-bar" style="visibility: hidden;">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Search...">
+                </div>
+                <div class="user-profile">
+                    <div class="avatar">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <span id="topbar-username">Shravani</span>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="header-action" style="margin-bottom: 20px;">
+                    <h1 data-i18n="cal_title">Financial Calendar</h1>
+                </div>
+
+                <div class="calendar-layout">
+                    <!-- Column 1: Main Calendar & Day Details -->
+                    <div style="display: flex; flex-direction: column; gap: 30px;">
+                        <!-- Calendar Card -->
+                        <div class="card" style="padding: 25px;">
+                            <!-- Navigation Header -->
+                            <div class="calendar-header">
+                                <button class="nav-btn" onclick="changeMonth(-1)"><i class="fa-solid fa-chevron-left"></i></button>
+                                <h2 id="calendar-month-year">May 2026</h2>
+                                <button class="nav-btn" onclick="changeMonth(1)"><i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
+
+                            <!-- Color Legend Details -->
+                            <div class="calendar-legend">
+                                <div class="legend-item income">
+                                    <div class="color-box"></div>
+                                    <span data-i18n="cal_money_added">Money Added (Income)</span>
+                                </div>
+                                <div class="legend-item expense">
+                                    <div class="color-box"></div>
+                                    <span data-i18n="cal_money_spent">Money Spent (Expense)</span>
+                                </div>
+                                <div class="legend-item both">
+                                    <div class="color-box"></div>
+                                    <span data-i18n="cal_both">Both Inflow & Outflow</span>
+                                </div>
+                            </div>
+
+                            <!-- Grid Area -->
+                            <div class="calendar-grid-header" style="display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 10px;">
+                                <div class="calendar-weekday">Sun</div>
+                                <div class="calendar-weekday">Mon</div>
+                                <div class="calendar-weekday">Tue</div>
+                                <div class="calendar-weekday">Wed</div>
+                                <div class="calendar-weekday">Thu</div>
+                                <div class="calendar-weekday">Fri</div>
+                                <div class="calendar-weekday">Sat</div>
+                            </div>
+                            
+                            <div id="calendar-grid" class="calendar-grid">
+                                <!-- Populated dynamically via javascript -->
+                            </div>
+                        </div>
+
+                        <!-- Day Details Summary Card -->
+                        <div class="card day-details-card">
+                            <h3 id="selected-day-title" data-i18n="cal_details">Activity Details</h3>
+                            <ul id="day-tx-list" class="transaction-list">
+                                <li class="tx-item" style="justify-content: center; color: var(--text-muted); border: none;" data-i18n="cal_click_inspect">Click on any calendar day to inspect transactions</li>
+                            </ul>
+                            
+                            <!-- Inline Add Reminder Form (Shown when day is selected) -->
+                            <div id="reminder-form-container" class="inline-reminder-form" style="display: none;">
+                                <h4 data-i18n="cal_set_reminder"><i class="fa-solid fa-bell-concierge"></i> <span class="i18n-text">Set Bill / Pending Payment Reminder</span></h4>
+                                <div class="form-row">
+                                    <input type="text" id="rem-title" placeholder="Description (e.g. Internet Bill)" data-i18n="cal_rem_desc">
+                                    <input type="number" id="rem-amount" step="0.01" placeholder="Amount (optional)" data-i18n="cal_rem_amount">
+                                    <input type="time" id="rem-time">
+                                </div>
+                                <button class="btn-save" style="padding: 8px 16px; font-size: 0.85rem;" onclick="addReminder()" data-i18n="cal_save_reminder"><i class="fa-solid fa-plus"></i> <span class="i18n-text">Save Reminder</span></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Column 2: Reminders Checklist Sidebar Panel -->
+                    <div class="card reminders-sidebar-card">
+                        <h3 style="margin-bottom: 15px;" data-i18n="cal_scheduled"><i class="fa-solid fa-clock-rotate-left"></i> <span class="i18n-text">Scheduled Reminders & Bills</span></h3>
+                        <ul id="sidebar-reminders-list" class="reminders-list">
+                            <li class="tx-item" style="justify-content: center; color: var(--text-muted); border: none;" data-i18n="cal_loading_reminders">Loading reminders...</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const USER_ID = localStorage.getItem('userId');
+        if (!USER_ID) {
+            window.location.href = '/login_page';
+        }
+
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+        
+        const currencyObj = { 'INR': '₹', 'USD': '$', 'EUR': '€' };
+        const userCurrency = localStorage.getItem('userCurrency') || 'INR';
+        const sym = currencyObj[userCurrency] || '₹';
+
+        let currentDate = new Date();
+        let selectedDay = null;
+        let calendarData = {};
+
+        async function fetchCalendarData(month, year) {
+            try {
+                const res = await fetch(`/api/calendar/${USER_ID}?month=${month}&year=${year}`);
+                const data = await res.json();
+                calendarData = data.events || {};
+                renderCalendar(month, year);
+            } catch (err) {
+                console.error("Error loading calendar events:", err);
+                renderCalendar(month, year);
+            }
+        }
+
+        function renderCalendar(month, year) {
+            // Update Title
+            document.getElementById('calendar-month-year').textContent = `${monthNames[month - 1]} ${year}`;
+
+            const grid = document.getElementById('calendar-grid');
+            grid.innerHTML = '';
+
+            // Day index offsets (0 = Sun, 1 = Mon...)
+            const firstDayIndex = new Date(year, month - 1, 1).getDay();
+            const totalDays = new Date(year, month, 0).getDate();
+
+            // Populate padding spaces
+            for (let i = 0; i < firstDayIndex; i++) {
+                const emptyCell = document.createElement('div');
+                emptyCell.className = 'calendar-day empty';
+                grid.appendChild(emptyCell);
+            }
+
+            // Populate active calendar days
+            for (let day = 1; day <= totalDays; day++) {
+                const dayCell = document.createElement('div');
+                dayCell.className = 'calendar-day';
+                dayCell.dataset.day = day;
+
+                const numSpan = document.createElement('span');
+                numSpan.className = 'day-num';
+                numSpan.textContent = day;
+                dayCell.appendChild(numSpan);
+
+                const dayEvent = calendarData[day];
+                if (dayEvent) {
+                    if (dayEvent.has_income && dayEvent.has_expense) {
+                        dayCell.classList.add('day-both');
+                    } else if (dayEvent.has_income) {
+                        dayCell.classList.add('day-income');
+                    } else if (dayEvent.has_expense) {
+                        dayCell.classList.add('day-expense');
+                    }
+
+                    // Add dynamic dot and bell indicators
+                    const indicator = document.createElement('div');
+                    indicator.className = 'day-indicator';
+                    indicator.style.display = 'flex';
+                    indicator.style.gap = '4px';
+                    indicator.style.alignItems = 'center';
+                    indicator.style.justifyContent = 'flex-end';
+
+                    // 1. Render transaction dot indicator if there is income or expense
+                    if (dayEvent.has_income || dayEvent.has_expense) {
+                        const dot = document.createElement('div');
+                        dot.className = 'dot';
+                        indicator.appendChild(dot);
+                    }
+
+                    // 2. Render bell icon indicator beside it if there is a reminder
+                    if (dayEvent.has_reminder) {
+                        const bell = document.createElement('i');
+                        bell.className = 'fa-solid fa-bell';
+                        bell.style.fontSize = '10px';
+                        bell.style.color = '#F39C12'; // Glowing orange/gold bell
+                        bell.style.filter = 'drop-shadow(0 0 2px rgba(243, 156, 18, 0.4))';
+                        indicator.appendChild(bell);
+                    }
+
+                    dayCell.appendChild(indicator);
+
+                    // Add Hover Floating details tooltip
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'calendar-tooltip';
+                    dayEvent.transactions.forEach(t => {
+                        const line = document.createElement('div');
+                        let sign = '';
+                        let colorClass = '';
+                        if (t.type === 'income') {
+                            sign = '+';
+                            colorClass = 'inc';
+                        } else if (t.type === 'expense') {
+                            sign = '-';
+                            colorClass = 'exp';
+                        } else if (t.type === 'reminder') {
+                            sign = '⏰ ';
+                            colorClass = 'rem';
+                        }
+                        line.className = `tooltip-line ${colorClass}`;
+                        line.textContent = `${t.name}: ${sign}${sym}${t.amount}`;
+                        tooltip.appendChild(line);
+                    });
+                    dayCell.appendChild(tooltip);
+                }
+
+                // Selected styling sync on re-render
+                if (selectedDay === day) {
+                    dayCell.classList.add('selected');
+                }
+
+                // Add Click handler to pop daily logs
+                dayCell.addEventListener('click', () => {
+                    document.querySelectorAll('.calendar-day').forEach(c => c.classList.remove('selected'));
+                    dayCell.classList.add('selected');
+                    selectedDay = day;
+                    showDayDetails(day, dayEvent);
+                });
+
+                grid.appendChild(dayCell);
+            }
+        }
+
+        function showDayDetails(day, eventData) {
+            const container = document.getElementById('day-tx-list');
+            const title = document.getElementById('selected-day-title');
+            
+            const monthStr = monthNames[currentDate.getMonth()];
+            const yearStr = currentDate.getFullYear();
+            title.textContent = `Activity for ${monthStr} ${day}, ${yearStr}`;
+            
+            container.innerHTML = '';
+            
+            if (!eventData || !eventData.transactions || eventData.transactions.length === 0) {
+                container.innerHTML = '<li class="tx-item" style="justify-content: center; color: var(--text-muted); border: none;">No transactions logged for this day</li>';
+            } else {
+                eventData.transactions.forEach(t => {
+                    const li = document.createElement('li');
+                    li.className = 'tx-item';
+                    
+                    const isIncome = t.type === 'income';
+                    const icon = isIncome ? 'fa-wallet' : 'fa-receipt';
+                    const amtClass = isIncome ? 'positive' : 'negative';
+                    const sign = isIncome ? '+' : '-';
+                    
+                    li.innerHTML = `
+                        <div class="tx-info">
+                            <div class="tx-icon" style="${isIncome ? 'color: var(--success); background-color: #E2FFED;' : ''}"><i class="fa-solid ${icon}"></i></div>
+                            <div>
+                                <h4>${t.name}</h4>
+                                <span class="tx-date" style="text-transform: capitalize;">${t.type}</span>
+                            </div>
+                        </div>
+                        <div class="tx-amount ${amtClass}">${sign}${sym}${t.amount.toFixed(2)}</div>
+                    `;
+                    container.appendChild(li);
+                });
+            }
+
+            // Expose the Add Reminder form for this clicked date
+            document.getElementById('reminder-form-container').style.display = 'block';
+            document.getElementById('rem-title').value = '';
+            document.getElementById('rem-amount').value = '';
+            document.getElementById('rem-time').value = '';
+        }
+
+        // Fetch all user reminders and list chronologically
+        async function loadReminders() {
+            try {
+                const res = await fetch(`/api/reminders/${USER_ID}`);
+                const reminders = await res.json();
+                
+                const list = document.getElementById('sidebar-reminders-list');
+                list.innerHTML = '';
+                
+                if (reminders.length === 0) {
+                    list.innerHTML = `<li class="tx-item" style="justify-content: center; color: var(--text-muted); border: none;" data-i18n="cal_no_reminders">${t('cal_no_reminders')}</li>`;
+                    return;
+                }
+                
+                reminders.forEach(r => {
+                    const li = document.createElement('li');
+                    li.className = 'reminder-item';
+                    
+                    // Format Date nicely
+                    const [year, month, day] = r.due_date.split('-');
+                    const dateObj = new Date(year, month - 1, day);
+                    const dueDateStr = dateObj.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+                    const dueTimeStr = r.due_time || 'All Day';
+                    
+                    li.innerHTML = `
+                        <div class="reminder-info">
+                            <h4>${r.title}</h4>
+                            <span><i class="fa-regular fa-clock"></i> ${dueDateStr} at ${dueTimeStr}</span>
+                            ${r.amount > 0 ? `<strong style="font-size: 12.5px; color: var(--text-main); margin-top: 4px; display: block;">${sym}${r.amount.toFixed(2)}</strong>` : ''}
+                        </div>
+                        <div class="reminder-actions">
+                            <button class="btn-pay-reminder" title="Mark as Paid" onclick="payReminder(${r.reminder_id}, '${r.title}', ${r.amount})"><i class="fa-solid fa-check"></i></button>
+                            <button class="btn-delete-reminder" title="Delete Reminder" onclick="deleteReminder(${r.reminder_id})"><i class="fa-solid fa-trash-can"></i></button>
+                        </div>
+                    `;
+                    list.appendChild(li);
+                });
+            } catch (err) {
+                console.error("Error loading reminders:", err);
+            }
+        }
+
+        // Add Reminder AJAX call
+        async function addReminder() {
+            const titleInput = document.getElementById('rem-title');
+            const amtInput = document.getElementById('rem-amount');
+            const timeInput = document.getElementById('rem-time');
+            
+            const title = titleInput.value.trim();
+            const amount = parseFloat(amtInput.value) || 0.00;
+            const time = timeInput.value || null;
+            
+            if (!title) {
+                alert('Please enter a description for your reminder');
+                return;
+            }
+            if (!selectedDay) {
+                alert('Please select a date on the calendar first');
+                return;
+            }
+            
+            // Format selected due date (YYYY-MM-DD)
+            const m = String(currentDate.getMonth() + 1).padStart(2, '0');
+            const y = currentDate.getFullYear();
+            const d = String(selectedDay).padStart(2, '0');
+            const dueDate = `${y}-${m}-${d}`;
+            
+            try {
+                const res = await fetch(`/api/reminders/${USER_ID}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: title,
+                        amount: amount,
+                        due_date: dueDate,
+                        due_time: time
+                    })
+                });
+                
+                if (res.ok) {
+                    titleInput.value = '';
+                    amtInput.value = '';
+                    timeInput.value = '';
+                    
+                    // Reload global upcoming reminder checklist
+                    loadReminders();
+                    
+                    // Re-query calendar data to color highlight today's status
+                    const currentMonth = currentDate.getMonth() + 1;
+                    const currentYear = currentDate.getFullYear();
+                    fetchCalendarData(currentMonth, currentYear);
+                } else {
+                    alert('Failed to save reminder.');
+                }
+            } catch (err) {
+                console.error("Error adding reminder:", err);
+            }
+        }
+
+        // Delete Reminder AJAX call
+        async function deleteReminder(id) {
+            if (!confirm('Are you sure you want to delete this reminder?')) return;
+            try {
+                const res = await fetch(`/api/reminders/${USER_ID}/${id}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    loadReminders();
+                    const currentMonth = currentDate.getMonth() + 1;
+                    const currentYear = currentDate.getFullYear();
+                    fetchCalendarData(currentMonth, currentYear);
+                }
+            } catch (err) {
+                console.error("Error deleting reminder:", err);
+            }
+        }
+
+        // Mark Reminder as Paid & Log to Expense DB
+        async function payReminder(id, title, amount) {
+            if (!confirm(`Mark "${title}" as paid? This will automatically log a ${sym}${amount.toFixed(2)} Expense under "Bills & Utilities"`)) return;
+            try {
+                const res = await fetch(`/api/reminders/${USER_ID}/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 'paid' })
+                });
+                
+                if (res.ok) {
+                    alert('Reminder marked as paid and logged as expense successfully!');
+                    loadReminders();
+                    
+                    // Re-query calendar highlights
+                    const currentMonth = currentDate.getMonth() + 1;
+                    const currentYear = currentDate.getFullYear();
+                    fetchCalendarData(currentMonth, currentYear);
+                } else {
+                    alert('Failed to mark as paid.');
+                }
+            } catch (err) {
+                console.error("Error paying reminder:", err);
+            }
+        }
+
+        function changeMonth(delta) {
+            selectedDay = null; // Clear active clicked day
+            document.getElementById('day-tx-list').innerHTML = `<li class="tx-item" style="justify-content: center; color: var(--text-muted); border: none;" data-i18n="cal_click_inspect">${t('cal_click_inspect')}</li>`;
+            document.getElementById('selected-day-title').textContent = t('cal_details');
+            document.getElementById('reminder-form-container').style.display = 'none';
+
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            const m = currentDate.getMonth() + 1;
+            const y = currentDate.getFullYear();
+            fetchCalendarData(m, y);
+        }
+
+        // Initial Load
+        window.onload = () => {
+            const m = currentDate.getMonth() + 1;
+            const y = currentDate.getFullYear();
+            fetchCalendarData(m, y);
+            loadReminders();
+        };
+    </script>
+</body>
+</html>
