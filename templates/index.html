@@ -4,11 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sanchaya - Personal Finance Tracker</title>
+    <title>Yadav & Jain Company - Personal Finance Tracker</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+    <script src="{{ url_for('static', filename='vendor/chartjs/chart.umd.min.js') }}"></script>
     <script src="{{ url_for('static', filename='i18n.js') }}"></script>
     <script>
         // Apply theme early to prevent flickering
@@ -34,35 +34,74 @@
     <div class="dashboard">
         <aside class="sidebar">
             <div class="logo">
-                <i class="fa-solid fa-wallet"></i>
-                <h2>Sanchaya</h2>
+                <div class="logo-badge">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div class="logo-title-group">
+                    <h2>Yadav & Jain Company</h2>
+                    <span class="logo-tagline">Wealth Management</span>
+                </div>
             </div>
             <nav>
+                <div class="nav-section-label">Overview</div>
                 <a href="/" class="active" data-i18n="nav_dashboard"><i class="fa-solid fa-chart-pie"></i> <span class="i18n-text">Dashboard</span></a>
                 <a href="/transactions" data-i18n="nav_transactions"><i class="fa-solid fa-money-bill-transfer"></i> <span class="i18n-text">Transactions</span></a>
                 <a href="/calendar" data-i18n="nav_calendar"><i class="fa-solid fa-calendar-days"></i> <span class="i18n-text">Calendar</span></a>
+                
+                <div class="nav-section-label">Analytics & Config</div>
                 <a href="/reports" data-i18n="nav_reports"><i class="fa-solid fa-chart-line"></i> <span class="i18n-text">Reports</span></a>
                 <a href="/settings" data-i18n="nav_settings"><i class="fa-solid fa-gear"></i> <span class="i18n-text">Settings</span></a>
             </nav>
+            <div class="sidebar-footer">
+                <div class="sidebar-user-card" onclick="window.location.href='/settings'">
+                    <div class="avatar" style="width: 28px; height: 28px; font-size: 11px;">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                        <span style="font-size: 12px; font-weight: 700;">MySQL 8.0</span>
+                        <span style="font-size: 10px; color: var(--text-muted);">Secure Connection</span>
+                    </div>
+                    <span class="status-beacon"></span>
+                </div>
+            </div>
         </aside>
 
         <main class="main-content">
             <header class="topbar">
-                <div class="search-bar">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="dashboard-search" placeholder="Search transactions..." data-i18n="search_placeholder">
-                </div>
-                <div class="user-profile">
-                    <div class="avatar">
-                        <i class="fa-solid fa-user"></i>
+                <div class="topbar-left">
+                    <div class="search-bar">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="dashboard-search" placeholder="Search transactions..." data-i18n="search_placeholder">
+                        <span class="search-shortcut">⌘K</span>
                     </div>
-                    <span id="topbar-username">Shravani</span>
+                </div>
+                <div class="topbar-right">
+                    <button class="topbar-icon-btn" id="theme-toggle-btn" onclick="toggleThemeQuick()" title="Switch Light/Dark Theme">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    <div class="topbar-icon-btn" title="System Notifications">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="notification-badge"></span>
+                    </div>
+                    <div class="user-profile" onclick="window.location.href='/settings'">
+                        <div class="avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="user-meta">
+                            <span id="topbar-username" class="user-name">bhoomi</span>
+                            <span class="user-role">Administrator</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-right user-chevron"></i>
+                    </div>
                 </div>
             </header>
 
             <div class="content">
                 <div class="header-action">
-                    <h1 data-i18n="dash_title">Dashboard</h1>
+                    <div class="header-title-wrap">
+                        <h1 data-i18n="dash_title">Financial Dashboard</h1>
+                        <span class="header-subtitle">Real-time wealth tracking, budgeting & activity insights</span>
+                    </div>
                     <button class="btn-primary" onclick="window.location.href='/transactions'" data-i18n="dash_btn_add_tx"><i class="fa-solid fa-plus"></i> <span class="i18n-text">Add Transaction</span></button>
                 </div>
 
@@ -70,11 +109,12 @@
                 <div id="alert-banner-container"></div>
 
                 <div class="kpi-cards">
-                    <div class="card kpi">
+                    <div class="card kpi kpi-hero">
                         <div class="kpi-icon balance"><i class="fa-solid fa-vault"></i></div>
                         <div class="kpi-details">
                             <h3 data-i18n="card_total_balance">Total Balance</h3>
                             <p id="total-balance">₹0.00</p>
+                            <span class="kpi-subtext positive"><i class="fa-solid fa-circle-check"></i> Available Net Funds</span>
                         </div>
                     </div>
                     <div class="card kpi">
@@ -82,6 +122,7 @@
                         <div class="kpi-details">
                             <h3 data-i18n="card_total_income">Total Income</h3>
                             <p id="total-income">₹0.00</p>
+                            <span class="kpi-subtext positive"><i class="fa-solid fa-arrow-up"></i> Inflow Recorded</span>
                         </div>
                     </div>
                     <div class="card kpi">
@@ -89,6 +130,7 @@
                         <div class="kpi-details">
                             <h3 data-i18n="card_total_spent">Total Expenses</h3>
                             <p id="total-expense">₹0.00</p>
+                            <span class="kpi-subtext negative"><i class="fa-solid fa-arrow-down"></i> Outflow Tracked</span>
                         </div>
                     </div>
                     <div class="card kpi">
@@ -96,14 +138,22 @@
                         <div class="kpi-details">
                             <h3 data-i18n="card_spending_ratio">Spending Ratio</h3>
                             <p id="spending-ratio">0%</p>
+                            <span class="kpi-subtext neutral" id="ratio-subtext"><i class="fa-solid fa-gauge"></i> Budget Status</span>
                         </div>
                     </div>
-                </div></div>
+                </div>
 
                 <div class="charts-section">
                     <div class="card chart-container">
-                        <h2 data-i18n="chart_monthly_spending">Monthly Spending</h2>
-                        <div class="chart-placeholder" style="position: relative; height:250px; width:100%">
+                        <div class="card-header-bar">
+                            <h2 data-i18n="chart_monthly_spending"><i class="fa-solid fa-chart-area" style="color: var(--primary);"></i> Monthly Spending Trends</h2>
+                            <div class="timeframe-pills">
+                                <button class="timeframe-pill active">All</button>
+                                <button class="timeframe-pill">6M</button>
+                                <button class="timeframe-pill">1Y</button>
+                            </div>
+                        </div>
+                        <div class="chart-placeholder" style="position: relative; height:270px; width:100%">
                             <canvas id="spendingChart"></canvas>
                         </div>
                     </div>
@@ -148,8 +198,13 @@
                 const kpiCard = ratioEl.closest('.kpi');
                 const bannerContainer = document.getElementById('alert-banner-container');
                 
+                const subtext = document.getElementById('ratio-subtext');
                 if (budgetData.warning) {
                     if (kpiCard) kpiCard.classList.add('warning-active');
+                    if (subtext) {
+                        subtext.className = 'kpi-subtext negative';
+                        subtext.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Limit Exceeded (90%+)';
+                    }
                     bannerContainer.innerHTML = `
                         <div class="budget-alert-banner">
                             <div class="warning-content">
@@ -164,6 +219,10 @@
                     `;
                 } else {
                     if (kpiCard) kpiCard.classList.remove('warning-active');
+                    if (subtext) {
+                        subtext.className = 'kpi-subtext positive';
+                        subtext.innerHTML = '<i class="fa-solid fa-circle-check"></i> Budget Limit Healthy';
+                    }
                     bannerContainer.innerHTML = '';
                 }
 
@@ -179,21 +238,39 @@
                             datasets: [{
                                 label: `${t('chart_spending_label')} (${sym})`,
                                 data: chartData.spending,
-                                borderColor: '#4318FF',
-                                backgroundColor: 'rgba(67, 24, 255, 0.1)',
-                                borderWidth: 2,
+                                borderColor: '#4F46E5',
+                                backgroundColor: 'rgba(79, 70, 229, 0.08)',
+                                borderWidth: 3,
                                 fill: true,
-                                tension: 0.4
+                                tension: 0.4,
+                                pointBackgroundColor: '#4F46E5',
+                                pointBorderColor: '#FFFFFF',
+                                pointBorderWidth: 2,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
                             }]
                         },
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
                             plugins: {
-                                legend: { display: false }
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: '#0F172A',
+                                    titleFont: { family: "'Plus Jakarta Sans', sans-serif", weight: 'bold' },
+                                    bodyFont: { family: "'Plus Jakarta Sans', sans-serif" },
+                                    padding: 10,
+                                    cornerRadius: 8
+                                }
                             },
                             scales: {
-                                y: { beginAtZero: true }
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: 'rgba(148, 163, 184, 0.15)' }
+                                },
+                                x: {
+                                    grid: { display: false }
+                                }
                             }
                         }
                     });
@@ -210,18 +287,28 @@
                     if (txData.length === 0) {
                         list.innerHTML = `<li class="tx-item" style="justify-content: center; color: var(--text-muted); border: none;" data-i18n="no_transactions">${t('no_transactions')}</li>`;
                     } else {
-                        txData.slice(0, 5).forEach(tx => {
+                        const catIcons = {
+                            'Food & Dining': 'fa-utensils',
+                            'Shopping': 'fa-bag-shopping',
+                            'Transport': 'fa-car',
+                            'Bills & Utilities': 'fa-bolt',
+                            'Entertainment': 'fa-film',
+                            'Salary': 'fa-money-bill-wave',
+                            'Freelance': 'fa-laptop-code'
+                        };
+                        txData.slice(0, 6).forEach(tx => {
                             const li = document.createElement('li');
                             li.className = 'tx-item';
+                            const icon = catIcons[tx.category] || 'fa-receipt';
                             li.innerHTML = `
                                 <div class="tx-info">
-                                    <div class="tx-icon"><i class="fa-solid fa-receipt"></i></div>
+                                    <div class="tx-icon"><i class="fa-solid ${icon}"></i></div>
                                     <div>
                                         <h4>${tx.category}</h4>
-                                        <span class="tx-date">${tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Unknown Date'}</span>
+                                        <span class="tx-date">${tx.created_at ? new Date(tx.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Recent'}</span>
                                     </div>
                                 </div>
-                                <div class="tx-amount negative">-${sym}${tx.amount}</div>
+                                <div class="tx-amount negative">-${sym}${parseFloat(tx.amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                             `;
                             list.appendChild(li);
                         });

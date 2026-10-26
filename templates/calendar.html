@@ -4,11 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Calendar - Sanchaya</title>
+    <title>Calendar - Yadav & Jain Company</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="{{ url_for('static', filename='i18n.js') }}"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <script>
         const savedTheme = localStorage.getItem('userTheme');
         if (savedTheme && savedTheme !== 'light') {
@@ -33,36 +33,73 @@
         <!-- Sidebar Navigation -->
         <aside class="sidebar">
             <div class="logo">
-                <i class="fa-solid fa-wallet"></i>
-                <h2>Sanchaya</h2>
+                <div class="logo-badge">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div class="logo-title-group">
+                    <h2>Yadav & Jain Company</h2>
+                    <span class="logo-tagline">Wealth Management</span>
+                </div>
             </div>
             <nav>
+                <div class="nav-section-label">Overview</div>
                 <a href="/" data-i18n="nav_dashboard"><i class="fa-solid fa-chart-pie"></i> <span class="i18n-text">Dashboard</span></a>
                 <a href="/transactions" data-i18n="nav_transactions"><i class="fa-solid fa-money-bill-transfer"></i> <span class="i18n-text">Transactions</span></a>
                 <a href="/calendar" class="active" data-i18n="nav_calendar"><i class="fa-solid fa-calendar-days"></i> <span class="i18n-text">Calendar</span></a>
+                
+                <div class="nav-section-label">Analytics & Config</div>
                 <a href="/reports" data-i18n="nav_reports"><i class="fa-solid fa-chart-line"></i> <span class="i18n-text">Reports</span></a>
                 <a href="/settings" data-i18n="nav_settings"><i class="fa-solid fa-gear"></i> <span class="i18n-text">Settings</span></a>
             </nav>
+            <div class="sidebar-footer">
+                <div class="sidebar-user-card" onclick="window.location.href='/settings'">
+                    <div class="avatar" style="width: 28px; height: 28px; font-size: 11px;">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                        <span style="font-size: 12px; font-weight: 700;">MySQL 8.0</span>
+                        <span style="font-size: 10px; color: var(--text-muted);">Secure Connection</span>
+                    </div>
+                    <span class="status-beacon"></span>
+                </div>
+            </div>
         </aside>
 
         <!-- Main Content -->
         <main class="main-content">
             <header class="topbar">
-                <div class="search-bar" style="visibility: hidden;">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" placeholder="Search...">
+                <div class="topbar-left">
+                    <button type="button" onclick="jumpToToday()" style="background: var(--bg-card); border: 1px solid var(--border); color: var(--text-main); padding: 8px 16px; border-radius: 9999px; font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: var(--shadow-sm); transition: all 0.2s ease;">
+                        <i class="fa-regular fa-calendar-check" style="color: var(--primary);"></i> Jump to Today
+                    </button>
                 </div>
-                <div class="user-profile">
-                    <div class="avatar">
-                        <i class="fa-solid fa-user"></i>
+                <div class="topbar-right">
+                    <button class="topbar-icon-btn" id="theme-toggle-btn" onclick="toggleThemeQuick()" title="Switch Light/Dark Theme">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    <div class="topbar-icon-btn" title="System Notifications">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="notification-badge"></span>
                     </div>
-                    <span id="topbar-username">Shravani</span>
+                    <div class="user-profile" onclick="window.location.href='/settings'">
+                        <div class="avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="user-meta">
+                            <span id="topbar-username" class="user-name">bhoomi</span>
+                            <span class="user-role">Administrator</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-right user-chevron"></i>
+                    </div>
                 </div>
             </header>
 
             <div class="content">
-                <div class="header-action" style="margin-bottom: 20px;">
-                    <h1 data-i18n="cal_title">Financial Calendar</h1>
+                <div class="header-action">
+                    <div class="header-title-wrap">
+                        <h1 data-i18n="cal_title">Financial Calendar & Reminders</h1>
+                        <span class="header-subtitle">Plan upcoming bills, scheduled payments, and timeline flows</span>
+                    </div>
                 </div>
 
                 <div class="calendar-layout">
@@ -156,6 +193,11 @@
         let currentDate = new Date();
         let selectedDay = null;
         let calendarData = {};
+
+        function jumpToToday() {
+            currentDate = new Date();
+            fetchCalendarData(currentDate.getMonth() + 1, currentDate.getFullYear());
+        }
 
         async function fetchCalendarData(month, year) {
             try {

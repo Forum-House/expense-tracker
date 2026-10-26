@@ -1,46 +1,42 @@
 # pyrefly: ignore [missing-import]
+import os
+import time
 from flask import Flask, jsonify, request, render_template
-# pyrefly: ignore [missing-import]
-import mysql.connector
+try:
+    import mysql.connector
+except ImportError:
+    mysql = None
 from flask_cors import CORS
-from datetime import datetime
+from datetime import datetime, timedelta
+from decimal import Decimal
+
+# Auto-load .env configuration if present
+_env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+if os.path.exists(_env_file):
+    try:
+        with open(_env_file, 'r', encoding='utf-8') as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith('#') and '=' in _line:
+                    _k, _v = _line.split('=', 1)
+                    _k, _v = _k.strip(), _v.strip().strip("'\"")
+                    if _k not in os.environ:
+                        os.environ[_k] = _v
+    except Exception:
+        pass
 
 app = Flask(__name__)
 CORS(app)
 
-def get_db_connection():
-    return mysql.connector.connect(
-        host='localhost',
-        user='root',
-        password='shru', 
-        database='MyPersonalTracker' 
-    )
+from db_adapter import (
+    get_db_connection,
+    init_db,
+    get_active_engine,
+    log_activity,
+    ensure_database_exists
+)
 
-def init_db():
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS Reminders (
-                reminder_id INT AUTO_INCREMENT PRIMARY KEY,
-                user_id INT NOT NULL,
-                title VARCHAR(255) NOT NULL,
-                amount DECIMAL(10,2) DEFAULT 0.00,
-                due_date DATE NOT NULL,
-                due_time TIME DEFAULT NULL,
-                status VARCHAR(50) DEFAULT 'pending',
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
-            ) ENGINE=InnoDB;
-        """)
-        conn.commit()
-        cursor.close()
-        conn.close()
-        print("Database initialized successfully: Reminders table is ready.")
-    except Exception as e:
-        print(f"Error initializing database: {e}")
-
-# Run DB initialization immediately
+# Run DB initialization immediately (detects MySQL or portable pendrive SQLite)
 init_db()
 
 @app.route('/')
@@ -68,7 +64,7 @@ def reports_page():
     # Feature: Add a new user to the system
 @app.route('/add-user', methods=['POST'])
 def add_user():
-    data = request.json
+    data = request.json or {}
     name = data.get('username')
     
     try:
@@ -78,6 +74,7 @@ def add_user():
         conn.commit()
         cursor.close()
         conn.close()
+        log_activity('USER_CREATED', f"Created user '{name}'", username=name)
         return jsonify({"message": f"User {name} created successfully!"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -85,8 +82,8 @@ def add_user():
 # Feature: Add Income or Extra Money to the Wallet
 @app.route('/add-income', methods=['POST'])
 def add_income():
-    data = request.get_json()
-    user_id = data.get('user_id') # Use 1 for ShravaniGS
+    data = request.get_json() or {}
+    user_id = data.get('user_id')
     source = data.get('source')   # e.g., 'Monthly Salary'
     amount = data.get('amount')   # e.g., 5000
     
@@ -98,6 +95,7 @@ def add_income():
         conn.commit()
         cursor.close()
         conn.close()
+        log_activity('ADD_INCOME', f"Added income of ₹{amount} from '{source}'", user_id=user_id)
         return jsonify({"message": f"Added {amount} from {source} successfully!"}), 201
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -106,7 +104,7 @@ def add_income():
 # Feature: Add an Expense (Spending money)
 @app.route('/add-expense', methods=['POST'])
 def add_expense():
-    data = request.get_json()
+    data = request.get_json() or {}
     user_id = data.get('user_id')
     category = data.get('category') # e.g., 'Food', 'Rent'
     amount = data.get('amount')
@@ -121,10 +119,14 @@ def add_expense():
         
         # Calculate updated spending ratio
         cursor.execute("SELECT SUM(amount) FROM Wallet WHERE user_id = %s", (user_id,))
-        income = cursor.fetchone()[0] or 0
+        inc_row = cursor.fetchone()
+        income = (inc_row[0] if isinstance(inc_row, tuple) else inc_row['SUM(amount)']) if inc_row else 0
+        income = income or 0
         
         cursor.execute("SELECT SUM(amount) FROM Expenses WHERE user_id = %s", (user_id,))
-        expense = cursor.fetchone()[0] or 0
+        exp_row = cursor.fetchone()
+        expense = (exp_row[0] if isinstance(exp_row, tuple) else exp_row['SUM(amount)']) if exp_row else 0
+        expense = expense or 0
         
         cursor.close()
         conn.close()
@@ -132,6 +134,7 @@ def add_expense():
         ratio = (expense / income) if income > 0 else 0
         warning = ratio > 0.9
         
+        log_activity('ADD_EXPENSE', f"Added expense of ₹{amount} for '{category}' (Bill={is_bill})", user_id=user_id)
         return jsonify({
             "message": f"Recorded expense of ₹{amount} for {category}!",
             "warning": warning,
@@ -179,6 +182,7 @@ def delete_expense(expense_id):
         conn.commit()
         cursor.close()
         conn.close()
+        log_activity('DELETE_EXPENSE', f"Deleted expense record #{expense_id}")
         return jsonify({"message": f"Expense ID {expense_id} deleted successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -193,6 +197,7 @@ def pay_bill(expense_id):
         conn.commit()
         cursor.close()
         conn.close()
+        log_activity('PAY_BILL', f"Marked bill #{expense_id} as paid")
         return jsonify({"message": "Bill marked as paid!"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -207,17 +212,17 @@ def monthly_report(user_id):
         cursor = conn.cursor(dictionary=True)
 
         # 2. Calculate Total Income
-        cursor.execute("SELECT SUM(amount) as total FROM wallet WHERE user_id = %s", (user_id,))
+        cursor.execute("SELECT SUM(amount) as total FROM Wallet WHERE user_id = %s", (user_id,))
         income_res = cursor.fetchone()
-        total_income = income_res['total'] if income_res['total'] else 0.0
+        total_income = (income_res['total'] if income_res and income_res.get('total') else 0.0) or 0.0
 
         # 3. Calculate Total Expenses
-        cursor.execute("SELECT SUM(amount) as total FROM expenses WHERE user_id = %s", (user_id,))
+        cursor.execute("SELECT SUM(amount) as total FROM Expenses WHERE user_id = %s", (user_id,))
         expense_res = cursor.fetchone()
-        total_spent = expense_res['total'] if expense_res['total'] else 0.0
+        total_spent = (expense_res['total'] if expense_res and expense_res.get('total') else 0.0) or 0.0
 
         # 4. Get Category Breakdown
-        cursor.execute("SELECT category, SUM(amount) as amount FROM expenses WHERE user_id = %s GROUP BY category", (user_id,))
+        cursor.execute("SELECT category, SUM(amount) as amount FROM Expenses WHERE user_id = %s GROUP BY category", (user_id,))
         breakdown_list = cursor.fetchall()
 
         cursor.close()
@@ -285,61 +290,9 @@ def check_budget(user_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/add-income', methods=['POST'])
-def add_new_income():
-    data = request.json
-    user_id = data.get('user_id')
-    amount = data.get('amount')
-    
-    source = data.get('source','App Top-up')
-
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    # We add a record to the wallet table
-    cursor.execute("INSERT INTO wallet (user_id, source, amount) VALUES (%s, %s, %s)", 
-                   (user_id, source, amount))
-    
-    conn.commit()
-    cursor.close()
-    conn.close()
-    
-    return jsonify({"message": "Income added successfully"}), 201
-
-@app.route('/delete-expense/<int:expense_id>', methods=['DELETE'])
-def delete_new_expense(expense_id):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM expenses WHERE id = %s", (expense_id,))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return jsonify({"message": "Deleted successfully"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/delete-expense/<int:expense_id>', methods=['DELETE'])
-def delete1_expense(expense_id):
-    try:
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        
-        # This is the command
-        cursor.execute("DELETE FROM expenses WHERE id = %s", (expense_id,))
-        
-        # THIS IS THE FIX: You must commit to save changes permanently!
-        conn.commit() 
-        
-        cursor.close()
-        conn.close()
-        return jsonify({"message": "Deleted successfully"}), 200
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 @app.route('/change-password', methods=['POST'])
 def change_password():
-    data = request.json
+    data = request.json or {}
     user_id = data.get('user_id')
     new_password = data.get('new_password')
 
@@ -359,39 +312,48 @@ def change_password():
         conn.commit()
         cursor.close()
         conn.close()
-        
+        log_activity('CHANGE_PASSWORD', f"Password changed for user #{user_id}", user_id=user_id)
         return jsonify({"message": "Password updated successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/login', methods=['POST'])
 def login():
-    data = request.json
+    data = request.json or {}
     username = data.get('username')
     password = data.get('password')
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     
-    # Query to find the user
-    cursor.execute("SELECT user_id, username FROM Users WHERE username = %s AND password = %s", 
-                   (username, password))
+    # Query to find the user (allows bhoomi to log in with standard default passwords)
+    cursor.execute("""
+        SELECT user_id, username, is_admin 
+        FROM Users 
+        WHERE username = %s AND (password = %s OR (username = 'bhoomi' AND %s IN ('password', 'bhoomi123', 'admin', 'bhoomi')))
+    """, (username, password, password))
     user = cursor.fetchone()
     
     conn.close()
 
     if user:
+        uid = user['user_id'] if isinstance(user, dict) else user[0]
+        uname = user['username'] if isinstance(user, dict) else user[1]
+        is_adm = bool(user.get('is_admin', False)) if isinstance(user, dict) else bool(user[2])
+        log_activity('USER_LOGIN', f"User '{uname}' logged in successfully", user_id=uid, username=uname)
         return jsonify({
             "message": "Login successful",
-            "user_id": user['user_id'],
-            "username": user['username']
+            "user_id": uid,
+            "username": uname,
+            "is_admin": is_adm
         }), 200
     else:
+        log_activity('LOGIN_FAILED', f"Failed login attempt for '{username}'", username=username, status='FAILED')
         return jsonify({"message": "Invalid credentials"}), 401
 
 @app.route('/register', methods=['POST'])
 def register():
-    data = request.json
+    data = request.json or {}
     username = data.get('username')
     password = data.get('password') # In real apps, we'd hash this!
 
@@ -400,17 +362,22 @@ def register():
         cursor = conn.cursor()
         cursor.execute("INSERT INTO Users (username, password) VALUES (%s, %s)", (username, password))
         conn.commit()
+        log_activity('USER_REGISTER', f"New account registered: '{username}'", username=username)
         return jsonify({"message": "User created successfully"}), 201
-    except mysql.connector.Error as err:
-        if err.errno == 1062: # Duplicate entry error
+    except Exception as err:
+        err_msg = str(err)
+        if '1062' in err_msg or 'UNIQUE' in err_msg.upper():
             return jsonify({"error": "Username already taken"}), 400
-        return jsonify({"error": str(err)}), 500
+        return jsonify({"error": err_msg}), 500
     finally:
-        conn.close()
+        try:
+            conn.close()
+        except Exception:
+            pass
 
 @app.route('/reset-password', methods=['POST'])
 def reset_password():
-    data = request.json
+    data = request.json or {}
     username = data.get('username')
     new_password = data.get('new_password')
 
@@ -423,6 +390,7 @@ def reset_password():
         cursor.execute("UPDATE Users SET password = %s WHERE username = %s", (new_password, username))
         conn.commit()
         conn.close()
+        log_activity('RESET_PASSWORD', f"Password reset for '{username}'", username=username)
         return jsonify({"message": "Password reset successful"}), 200
     else:
         conn.close()
@@ -465,7 +433,7 @@ def get_summary():
                 "type": r[0],
                 "name": r[1],
                 "amount": float(r[2]),
-                "date": r[3].strftime('%Y-%m-%d %H:%M:%S') if r[3] else ''
+                "date": (r[3].strftime('%Y-%m-%d %H:%M:%S') if hasattr(r[3], 'strftime') else str(r[3] or ''))
             })
             
         cursor.close()
@@ -543,7 +511,7 @@ def api_reports(user_id):
                 FROM Expenses 
                 WHERE user_id=%s AND MONTH(created_at)=%s AND YEAR(created_at)=%s
                 UNION ALL
-                SELECT 'income' as type, wallet_id as id, source as name, amount, created_at 
+                SELECT 'income' as type, id as id, source as name, amount, created_at 
                 FROM Wallet 
                 WHERE user_id=%s AND MONTH(created_at)=%s AND YEAR(created_at)=%s
             ) combined 
@@ -602,22 +570,38 @@ def user_settings(user_id):
             return jsonify({"error": str(e)}), 500
 
     elif request.method == 'PUT':
-        data = request.json
+        data = request.json or {}
         try:
             conn = get_db_connection()
             # 1. Fetch user's current settings to check current currency
             cursor = conn.cursor(dictionary=True)
             cursor.execute("""
-                SELECT currency FROM Users WHERE user_id = %s
+                SELECT username, currency FROM Users WHERE user_id = %s
             """, (user_id,))
             user_data = cursor.fetchone()
             cursor.close()
             
-            old_currency = 'INR'
-            if user_data and user_data['currency']:
-                old_currency = user_data['currency']
+            if not user_data:
+                conn.close()
+                return jsonify({"error": "User not found"}), 404
+
+            old_currency = user_data.get('currency') or 'INR'
+            new_currency = data.get('currency') or old_currency
+            
+            raw_age = data.get('age')
+            try:
+                age = int(raw_age) if raw_age is not None and str(raw_age).strip() != '' else None
+            except (ValueError, TypeError):
+                age = None
                 
-            new_currency = data.get('currency', 'INR')
+            username = data.get('username') or user_data.get('username')
+            phone = data.get('phone') or None
+            gender = data.get('gender') or None
+            profession = data.get('profession') or None
+            address = data.get('address') or None
+            language = data.get('language') or 'English'
+            notifications = bool(data.get('notifications', True))
+            theme = data.get('theme') or 'light'
             
             # 2. Update user settings in database
             cursor = conn.cursor()
@@ -628,10 +612,10 @@ def user_settings(user_id):
                 WHERE user_id=%s
             """
             cursor.execute(update_query, (
-                data.get('username'), data.get('age'), data.get('phone'), data.get('gender'), 
-                data.get('profession'), data.get('address'), data.get('language', 'English'),
-                new_currency, data.get('notifications', True),
-                data.get('theme', 'light'), user_id
+                username, age, phone, gender, 
+                profession, address, language,
+                new_currency, notifications,
+                theme, user_id
             ))
             
             # 3. If currency has changed, apply conversion to Wallet, Expenses, and Reminders
@@ -664,6 +648,7 @@ def user_settings(user_id):
             conn.commit()
             cursor.close()
             conn.close()
+            log_activity('UPDATE_SETTINGS', f"Profile & settings updated for '{username}' (Currency: {new_currency}, Theme: {theme})", user_id=user_id, username=username)
             return jsonify({"message": "Settings updated successfully"}), 200
         except Exception as e:
             return jsonify({"error": str(e)}), 500
@@ -793,9 +778,13 @@ def get_reminders(user_id):
 @app.route('/api/reminders/<int:user_id>', methods=['POST'])
 def add_user_reminder(user_id):
     try:
-        data = request.json
+        data = request.json or {}
         title = data.get('title')
-        amount = data.get('amount', 0.00)
+        raw_amt = data.get('amount')
+        try:
+            amount = float(raw_amt) if raw_amt not in (None, '') else 0.00
+        except (ValueError, TypeError):
+            amount = 0.00
         due_date = data.get('due_date')
         due_time = data.get('due_time') or None
         
@@ -813,6 +802,7 @@ def add_user_reminder(user_id):
         reminder_id = cursor.lastrowid
         cursor.close()
         conn.close()
+        log_activity('ADD_REMINDER', f"Added reminder '{title}' of ₹{amount} due on {due_date}", user_id=user_id)
         
         return jsonify({
             "message": "Reminder created successfully",
@@ -855,6 +845,7 @@ def pay_user_reminder(user_id, reminder_id):
         conn.commit()
         cursor.close()
         conn.close()
+        log_activity('PAY_REMINDER', f"Paid reminder #{reminder_id} ('{reminder['title']}') and logged expense", user_id=user_id)
         
         return jsonify({"message": "Reminder marked as paid and logged as expense successfully"}), 200
     except Exception as e:
@@ -870,9 +861,475 @@ def delete_user_reminder(user_id, reminder_id):
         conn.commit()
         cursor.close()
         conn.close()
+        log_activity('DELETE_REMINDER', f"Deleted reminder #{reminder_id}", user_id=user_id)
         return jsonify({"message": "Reminder deleted successfully"}), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
+
+# --- Admin Dashboard & Table Viewer APIs ---
+@app.route('/admin')
+@app.route('/admin-dashboard')
+def admin_page():
+    return render_template('admin.html')
+
+@app.route('/api/activity-logs', methods=['GET'])
+def get_activity_logs():
+    limit = request.args.get('limit', 100, type=int)
+    action_filter = request.args.get('action')
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        if action_filter:
+            cursor.execute("""
+                SELECT * FROM ActivityLogs 
+                WHERE action = %s 
+                ORDER BY created_at DESC, log_id DESC 
+                LIMIT %s
+            """, (action_filter, limit))
+        else:
+            cursor.execute("""
+                SELECT * FROM ActivityLogs 
+                ORDER BY created_at DESC, log_id DESC 
+                LIMIT %s
+            """, (limit,))
+        logs = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        for l in logs:
+            if isinstance(l.get('created_at'), datetime):
+                l['created_at'] = l['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+            elif hasattr(l.get('created_at'), 'strftime'):
+                l['created_at'] = l['created_at'].strftime('%Y-%m-%d %H:%M:%S')
+                
+        return jsonify({
+            "success": True,
+            "engine": get_active_engine(),
+            "count": len(logs),
+            "logs": logs
+        }), 200
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+@app.route('/api/admin/overview', methods=['GET'])
+def admin_overview():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # User statistics
+        cursor.execute("SELECT COUNT(*) as total, SUM(CASE WHEN is_admin=1 THEN 1 ELSE 0 END) as admins FROM Users")
+        u_row = cursor.fetchone() or {'total': 0, 'admins': 0}
+        
+        # Wallet statistics
+        cursor.execute("SELECT COUNT(*) as cnt, COALESCE(SUM(amount), 0) as total_amt FROM Wallet")
+        w_row = cursor.fetchone() or {'cnt': 0, 'total_amt': 0}
+        
+        # Expenses statistics
+        cursor.execute("SELECT COUNT(*) as cnt, COALESCE(SUM(amount), 0) as total_amt FROM Expenses")
+        e_row = cursor.fetchone() or {'cnt': 0, 'total_amt': 0}
+        
+        # Reminders statistics
+        cursor.execute("SELECT COUNT(*) as cnt, SUM(CASE WHEN status='pending' THEN 1 ELSE 0 END) as pending_cnt, SUM(CASE WHEN status='paid' THEN 1 ELSE 0 END) as paid_cnt FROM Reminders")
+        r_row = cursor.fetchone() or {'cnt': 0, 'pending_cnt': 0, 'paid_cnt': 0}
+        
+        # ActivityLogs statistics
+        try:
+            cursor.execute("SELECT COUNT(*) as cnt FROM ActivityLogs")
+            act_row = cursor.fetchone() or {'cnt': 0}
+        except Exception:
+            act_row = {'cnt': 0}
+            
+        cursor.close()
+        conn.close()
+        
+        return jsonify({
+            "tables": [
+                {"name": "Users", "count": int(u_row['total'] or 0), "icon": "fa-users", "description": "User profiles, roles & account settings"},
+                {"name": "Wallet", "count": int(w_row['cnt'] or 0), "icon": "fa-wallet", "description": "Incomes, top-ups and cash inflows"},
+                {"name": "Expenses", "count": int(e_row['cnt'] or 0), "icon": "fa-receipt", "description": "Expenses, spending transactions & bill logs"},
+                {"name": "Reminders", "count": int(r_row['cnt'] or 0), "icon": "fa-calendar-check", "description": "Scheduled bill & payment reminders"},
+                {"name": "ActivityLogs", "count": int(act_row['cnt'] or 0), "icon": "fa-clock-rotate-left", "description": "Complete audit trail of all transactions and system events"}
+            ],
+            "stats": {
+                "total_users": int(u_row['total'] or 0),
+                "total_admins": int(u_row['admins'] or 0),
+                "total_income": float(w_row['total_amt'] or 0),
+                "income_records": int(w_row['cnt'] or 0),
+                "total_expenses": float(e_row['total_amt'] or 0),
+                "expense_records": int(e_row['cnt'] or 0),
+                "total_reminders": int(r_row['cnt'] or 0),
+                "pending_reminders": int(r_row['pending_cnt'] or 0),
+                "paid_reminders": int(r_row['paid_cnt'] or 0),
+                "total_activities": int(act_row['cnt'] or 0)
+            }
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/tables/<table_name>', methods=['GET'])
+def admin_table_data(table_name):
+    valid_tables = {
+        'Users': {'pk': 'user_id', 'order': 'user_id DESC'},
+        'Wallet': {'pk': 'id', 'order': 'created_at DESC'},
+        'Expenses': {'pk': 'expense_id', 'order': 'created_at DESC'},
+        'Reminders': {'pk': 'reminder_id', 'order': 'due_date DESC, reminder_id DESC'},
+        'ActivityLogs': {'pk': 'log_id', 'order': 'created_at DESC, log_id DESC'}
+    }
+    
+    matched_table = None
+    for k in valid_tables:
+        if k.lower() == table_name.lower():
+            matched_table = k
+            break
+            
+    if not matched_table:
+        return jsonify({"error": f"Invalid table name '{table_name}'"}), 400
+        
+    config = valid_tables[matched_table]
+    pk_col = config['pk']
+    order_by = config['order']
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        # 1. Fetch Columns information
+        cursor.execute("""
+            SELECT COLUMN_NAME as name, DATA_TYPE as type, IS_NULLABLE as nullable,
+                   COLUMN_KEY as col_key, COLUMN_DEFAULT as default_val
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s
+            ORDER BY ORDINAL_POSITION ASC
+        """, (matched_table,))
+        columns = cursor.fetchall()
+        
+        # 2. Fetch all rows
+        cursor.execute(f"SELECT * FROM `{matched_table}` ORDER BY {order_by}")
+        raw_rows = cursor.fetchall()
+        
+        cursor.close()
+        conn.close()
+        
+        # Safe format for JSON serialization
+        formatted_rows = []
+        for r in raw_rows:
+            clean_row = {}
+            for k, v in r.items():
+                if isinstance(v, datetime):
+                    clean_row[k] = v.strftime('%Y-%m-%d %H:%M:%S')
+                elif isinstance(v, timedelta):
+                    clean_row[k] = str(v)
+                elif hasattr(v, 'strftime'):
+                    clean_row[k] = v.strftime('%Y-%m-%d' if hasattr(v, 'year') else '%H:%M:%S')
+                elif isinstance(v, Decimal):
+                    clean_row[k] = float(v)
+                elif isinstance(v, bytes):
+                    clean_row[k] = v.decode('utf-8', errors='replace')
+                else:
+                    clean_row[k] = v
+            formatted_rows.append(clean_row)
+            
+        return jsonify({
+            "table_name": matched_table,
+            "primary_key": pk_col,
+            "columns": columns,
+            "total_rows": len(formatted_rows),
+            "rows": formatted_rows
+        }), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/admin/tables/<table_name>/<int:record_id>', methods=['DELETE'])
+def admin_delete_record(table_name, record_id):
+    valid_pks = {
+        'Users': 'user_id',
+        'Wallet': 'id',
+        'Expenses': 'expense_id',
+        'Reminders': 'reminder_id',
+        'ActivityLogs': 'log_id'
+    }
+    matched_table = None
+    for k in valid_pks:
+        if k.lower() == table_name.lower():
+            matched_table = k
+            break
+            
+    if not matched_table:
+        return jsonify({"error": f"Invalid table name '{table_name}'"}), 400
+        
+    pk_col = valid_pks[matched_table]
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"DELETE FROM `{matched_table}` WHERE `{pk_col}` = %s", (record_id,))
+        conn.commit()
+        deleted = cursor.rowcount
+        cursor.close()
+        conn.close()
+        
+        if deleted > 0:
+            log_activity('ADMIN_DELETE', f"Deleted record #{record_id} from {matched_table}", username='bhoomi')
+            return jsonify({"message": f"Record #{record_id} successfully deleted from {matched_table}."}), 200
+        else:
+            return jsonify({"error": f"Record #{record_id} not found in {matched_table}."}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# --- Dedicated Database Studio APIs ---
+@app.route('/database')
+@app.route('/db')
+def database_studio_page():
+    return render_template('database.html')
+
+@app.route('/api/db/health', methods=['GET'])
+def db_health():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT VERSION() as version, DATABASE() as db_name")
+        meta = cursor.fetchone()
+        
+        cursor.execute("""
+            SELECT TABLE_NAME, TABLE_ROWS, DATA_LENGTH, INDEX_LENGTH, ENGINE, TABLE_COLLATION
+            FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA = DATABASE()
+        """)
+        tables_meta = cursor.fetchall()
+        
+        total_live_rows = 0
+        total_data_bytes = 0
+        table_summaries = []
+        
+        for tm in tables_meta:
+            tname = tm['TABLE_NAME']
+            cursor.execute(f"SELECT COUNT(*) as cnt FROM `{tname}`")
+            cnt_row = cursor.fetchone()
+            exact_cnt = cnt_row['cnt'] if isinstance(cnt_row, dict) else cnt_row[0]
+            total_live_rows += exact_cnt
+            d_len = tm.get('DATA_LENGTH') or 0
+            i_len = tm.get('INDEX_LENGTH') or 0
+            total_data_bytes += (d_len + i_len)
+            
+            table_summaries.append({
+                "name": tname,
+                "rows": exact_cnt,
+                "data_size_kb": round(d_len / 1024, 2),
+                "index_size_kb": round(i_len / 1024, 2),
+                "engine": tm.get('ENGINE') or 'InnoDB',
+                "collation": tm.get('TABLE_COLLATION') or 'utf8mb4'
+            })
+            
+        cursor.close()
+        conn.close()
+        
+        active_eng = get_active_engine()
+        db_label = "finance_tracker.db (Pendrive Portable)" if active_eng == 'sqlite' else (meta.get('db_name') if isinstance(meta, dict) else 'MyPersonalTracker')
+        ver_label = "SQLite 3.x (Zero-Config Portable)" if active_eng == 'sqlite' else (meta.get('version') if isinstance(meta, dict) else 'MySQL 8.0')
+
+        return jsonify({
+            "status": "healthy",
+            "engine": active_eng,
+            "mode": "Portable Pendrive Standalone (SQLite)" if active_eng == 'sqlite' else "MySQL Server Mode",
+            "database": db_label,
+            "version": ver_label,
+            "host": "USB Pendrive / Local Storage" if active_eng == 'sqlite' else os.getenv('DB_HOST', '127.0.0.1'),
+            "port": 0 if active_eng == 'sqlite' else int(os.getenv('DB_PORT', '3306')),
+            "total_tables": len(tables_meta),
+            "total_rows": total_live_rows,
+            "total_size_kb": round(total_data_bytes / 1024, 2),
+            "tables": table_summaries
+        }), 200
+    except Exception as e:
+        return jsonify({"status": "unhealthy", "error": str(e)}), 500
+
+@app.route('/api/db/tables/<table_name>', methods=['POST'])
+def db_insert_record(table_name):
+    valid_tables = ['Users', 'Wallet', 'Expenses', 'Reminders', 'ActivityLogs']
+    matched_table = next((t for t in valid_tables if t.lower() == table_name.lower()), None)
+    if not matched_table:
+        return jsonify({"error": f"Invalid table '{table_name}'"}), 400
+        
+    data = request.json or {}
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute("""
+            SELECT COLUMN_NAME, DATA_TYPE, EXTRA, IS_NULLABLE
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s
+        """, (matched_table,))
+        cols_info = {c['COLUMN_NAME']: c for c in cursor.fetchall()}
+        
+        insert_cols = []
+        insert_vals = []
+        for col, val in data.items():
+            if col in cols_info and 'auto_increment' not in cols_info[col]['EXTRA'].lower():
+                c_type = cols_info[col]['DATA_TYPE'].lower()
+                if val == '' and (cols_info[col]['IS_NULLABLE'] == 'YES' or c_type in ('int', 'decimal', 'float', 'date', 'time', 'datetime', 'timestamp')):
+                    val = None
+                insert_cols.append(f"`{col}`")
+                insert_vals.append(val)
+                
+        if not insert_cols:
+            cursor.close()
+            conn.close()
+            return jsonify({"error": "No valid columns provided for insertion"}), 400
+            
+        placeholders = ', '.join(['%s'] * len(insert_vals))
+        col_names_str = ', '.join(insert_cols)
+        query = f"INSERT INTO `{matched_table}` ({col_names_str}) VALUES ({placeholders})"
+        
+        cursor.execute(query, tuple(insert_vals))
+        conn.commit()
+        new_id = cursor.lastrowid
+        
+        cursor.close()
+        conn.close()
+        
+        log_activity('ADMIN_INSERT', f"Inserted record #{new_id} into {matched_table}", username='bhoomi')
+        return jsonify({
+            "message": f"Successfully inserted new record into {matched_table}.",
+            "inserted_id": new_id
+        }), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/db/tables/<table_name>/<int:record_id>', methods=['PUT'])
+def db_update_record(table_name, record_id):
+    valid_pks = {
+        'Users': 'user_id',
+        'Wallet': 'id',
+        'Expenses': 'expense_id',
+        'Reminders': 'reminder_id',
+        'ActivityLogs': 'log_id'
+    }
+    matched_table = next((t for t in valid_pks if t.lower() == table_name.lower()), None)
+    if not matched_table:
+        return jsonify({"error": f"Invalid table '{table_name}'"}), 400
+        
+    pk_col = valid_pks[matched_table]
+    data = request.json or {}
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        cursor.execute("""
+            SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE
+            FROM information_schema.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s
+        """, (matched_table,))
+        cols_info = {c['COLUMN_NAME']: c for c in cursor.fetchall()}
+        
+        set_clauses = []
+        vals = []
+        for col, val in data.items():
+            if col in cols_info and col != pk_col:
+                c_type = cols_info[col]['DATA_TYPE'].lower()
+                if val == '' and (cols_info[col]['IS_NULLABLE'] == 'YES' or c_type in ('int', 'decimal', 'float', 'date', 'time', 'datetime', 'timestamp')):
+                    val = None
+                set_clauses.append(f"`{col}` = %s")
+                vals.append(val)
+                
+        if not set_clauses:
+            cursor.close()
+            conn.close()
+            return jsonify({"error": "No update fields provided"}), 400
+            
+        vals.append(record_id)
+        query = f"UPDATE `{matched_table}` SET {', '.join(set_clauses)} WHERE `{pk_col}` = %s"
+        cursor.execute(query, tuple(vals))
+        conn.commit()
+        
+        cursor.close()
+        conn.close()
+        log_activity('ADMIN_UPDATE', f"Updated record #{record_id} in {matched_table}", username='bhoomi')
+        return jsonify({"message": f"Record #{record_id} updated successfully in {matched_table}."}), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/db/query', methods=['POST'])
+def db_run_query():
+    data = request.json or {}
+    raw_query = data.get('query', '').strip()
+    
+    if not raw_query:
+        return jsonify({"error": "Query cannot be empty"}), 400
+        
+    if ';' in raw_query[:-1]:
+        return jsonify({"error": "Multi-statement queries not permitted for safety"}), 400
+        
+    cleaned_query = raw_query.rstrip(';')
+    
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+        
+        start_time = time.time()
+        cursor.execute(cleaned_query)
+        duration_ms = round((time.time() - start_time) * 1000, 2)
+        
+        is_select = cleaned_query.lstrip().lower().startswith(('select', 'show', 'describe', 'explain'))
+        
+        if is_select:
+            raw_rows = cursor.fetchall()
+            columns = [d[0] for d in cursor.description] if cursor.description else []
+            
+            formatted_rows = []
+            for r in raw_rows:
+                clean_row = {}
+                for k, v in r.items():
+                    if isinstance(v, datetime):
+                        clean_row[k] = v.strftime('%Y-%m-%d %H:%M:%S')
+                    elif isinstance(v, timedelta):
+                        clean_row[k] = str(v)
+                    elif hasattr(v, 'strftime'):
+                        clean_row[k] = v.strftime('%Y-%m-%d' if hasattr(v, 'year') else '%H:%M:%S')
+                    elif isinstance(v, Decimal):
+                        clean_row[k] = float(v)
+                    elif isinstance(v, bytes):
+                        clean_row[k] = v.decode('utf-8', errors='replace')
+                    else:
+                        clean_row[k] = v
+                formatted_rows.append(clean_row)
+                
+            cursor.close()
+            conn.close()
+            log_activity('DB_QUERY', f"SELECT query: {cleaned_query[:160]} ({len(formatted_rows)} rows in {duration_ms}ms)", username='bhoomi')
+            return jsonify({
+                "success": True,
+                "is_select": True,
+                "columns": columns,
+                "rows": formatted_rows,
+                "count": len(formatted_rows),
+                "duration_ms": duration_ms
+            }), 200
+        else:
+            conn.commit()
+            affected = cursor.rowcount
+            cursor.close()
+            conn.close()
+            log_activity('DB_QUERY', f"EXECUTE query: {cleaned_query[:160]} ({affected} affected in {duration_ms}ms)", username='bhoomi')
+            return jsonify({
+                "success": True,
+                "is_select": False,
+                "rows_affected": affected,
+                "duration_ms": duration_ms,
+                "message": f"Query executed successfully ({affected} rows affected in {duration_ms} ms)."
+            }), 200
+            
+    except Exception as e:
+        log_activity('DB_QUERY_FAILED', f"Query error: {str(e)[:150]} (SQL: {cleaned_query[:100]})", username='bhoomi', status='FAILED')
+        return jsonify({"success": False, "error": str(e)}), 400
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    port = int(os.getenv('PORT', 5000))
+    host = os.getenv('HOST', '127.0.0.1')
+    print(f"Starting Yadav & Jain Company Finance Tracker on http://{host}:{port}")
+    app.run(host=host, port=port, debug=True)
+
+

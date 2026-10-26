@@ -6,6 +6,7 @@ const translations = {
         'nav_calendar': 'Calendar',
         'nav_reports': 'Reports',
         'nav_settings': 'Settings',
+        'nav_admin': 'Admin Dashboard',
         'logout_btn': 'Logout',
         'search_placeholder': 'Search...',
 
@@ -117,6 +118,7 @@ const translations = {
         'nav_calendar': 'ಕ್ಯಾಲೆಂಡರ್',
         'nav_reports': 'ವರದಿಗಳು',
         'nav_settings': 'ಸೆಟ್ಟಿಂಗ್‌ಗಳು',
+        'nav_admin': 'ನಿರ್ವಾಹಕ ಡ್ಯಾಶ್‌ಬೋರ್ಡ್',
         'logout_btn': 'ಲಾಗ್ ಔಟ್',
         'search_placeholder': 'ಹುಡುಕಿ...',
 
@@ -228,6 +230,7 @@ const translations = {
         'nav_calendar': 'कैलेंडर',
         'nav_reports': 'रिपोर्ट',
         'nav_settings': 'सेटिंग्स',
+        'nav_admin': 'एडमिन डैशबोर्ड',
         'logout_btn': 'लॉग आउट',
         'search_placeholder': 'खोजें...',
 
@@ -373,9 +376,17 @@ function applyLanguage(lang) {
                             break;
                         }
                     }
-                    // 4. Default fallback: set textContent directly
+                    // 4. Default fallback: preserve any <i> icon
                     if (!replaced) {
-                        el.textContent = translations[lang][key];
+                        const icon = el.querySelector('i');
+                        if (icon) {
+                            const iconClone = icon.cloneNode(true);
+                            el.innerHTML = '';
+                            el.appendChild(iconClone);
+                            el.appendChild(document.createTextNode(' ' + translations[lang][key]));
+                        } else {
+                            el.textContent = translations[lang][key];
+                        }
                     }
                 }
             }
@@ -383,10 +394,44 @@ function applyLanguage(lang) {
     });
 }
 
-// Auto-apply on page load
+// Auto-apply language and theme on page load
 document.addEventListener('DOMContentLoaded', () => {
     const savedLang = localStorage.getItem('userLang');
     if (savedLang) {
         applyLanguage(savedLang);
     }
+    initGlobalTheme();
 });
+
+// Global Theme Management
+function initGlobalTheme() {
+    const savedTheme = localStorage.getItem('userTheme') || 'light';
+    applyThemeGlobal(savedTheme);
+}
+
+function toggleThemeQuick() {
+    const current = localStorage.getItem('userTheme') || 'light';
+    const next = current === 'dark' ? 'light' : 'dark';
+    applyThemeGlobal(next);
+}
+
+function applyThemeGlobal(theme) {
+    document.documentElement.className = '';
+    document.body.className = '';
+    if (theme && theme !== 'light') {
+        document.documentElement.classList.add(`theme-${theme}`);
+        document.documentElement.setAttribute('data-theme', theme);
+        document.body.classList.add(`theme-${theme}`);
+        document.body.setAttribute('data-theme', theme);
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        document.body.removeAttribute('data-theme');
+    }
+    localStorage.setItem('userTheme', theme || 'light');
+    
+    // Update theme toggle button icon if present
+    const btn = document.getElementById('theme-toggle-btn');
+    if (btn) {
+        btn.innerHTML = (theme === 'dark') ? '<i class="fa-solid fa-sun" style="color: #F59E0B;"></i>' : '<i class="fa-solid fa-moon"></i>';
+    }
+}

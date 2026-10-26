@@ -1,0 +1,925 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Database Dashboard - Yadav & Jain Company</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+    <script src="{{ url_for('static', filename='i18n.js') }}"></script>
+    <script>
+        const savedTheme = localStorage.getItem('userTheme');
+        if (savedTheme && savedTheme !== 'light') {
+            document.documentElement.classList.add(`theme-${savedTheme}`);
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            const userName = localStorage.getItem('userName') || 'bhoomi';
+            const topUser = document.getElementById('topbar-username');
+            if (topUser) topUser.textContent = userName;
+        });
+    </script>
+    <style>
+        .admin-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .admin-title-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: linear-gradient(135deg, rgba(67, 24, 255, 0.1) 0%, rgba(138, 43, 226, 0.1) 100%);
+            border: 1px solid rgba(67, 24, 255, 0.2);
+            color: var(--primary);
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .bento-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .bento-stat-card {
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 22px;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            display: flex;
+            align-items: center;
+            gap: 18px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+
+        .bento-stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(67, 24, 255, 0.08);
+            border-color: var(--primary);
+        }
+
+        .bento-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .bento-icon.users {
+            background-color: #E9E3FF;
+            color: #4318FF;
+        }
+
+        .bento-icon.wallet {
+            background-color: #E2FFED;
+            color: #05CD99;
+        }
+
+        .bento-icon.expenses {
+            background-color: #FEEFEE;
+            color: #EE5D50;
+        }
+
+        .bento-icon.reminders {
+            background-color: #FFF6E5;
+            color: #FFB547;
+        }
+
+        .bento-icon.activities {
+            background-color: #EDE9FE;
+            color: #7C3AED;
+        }
+
+        .bento-info h4 {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .bento-info .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .bento-info .sub-stat {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        /* Tabs styling */
+        .table-tabs-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+
+        .tab-btn:hover {
+            background-color: var(--bg-main);
+            color: var(--primary);
+        }
+
+        .tab-btn.active {
+            background-color: var(--primary);
+            color: white;
+            box-shadow: 0 4px 15px rgba(67, 24, 255, 0.25);
+        }
+
+        .tab-badge {
+            background: rgba(255, 255, 255, 0.25);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+        }
+
+        .tab-btn:not(.active) .tab-badge {
+            background: var(--bg-main);
+            color: var(--text-muted);
+        }
+
+        /* Card Container */
+        .table-view-card {
+            background-color: var(--bg-card);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        }
+
+        .table-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .table-search-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px 16px;
+            width: 320px;
+            max-width: 100%;
+        }
+
+        .table-search-box input {
+            border: none;
+            background: none;
+            outline: none;
+            width: 100%;
+            font-size: 14px;
+            color: var(--text-main);
+        }
+
+        .table-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            transition: all 0.2s ease;
+        }
+
+        .btn-action:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+            background-color: var(--bg-main);
+        }
+
+        .btn-action.primary {
+            background-color: var(--primary);
+            color: white;
+            border-color: var(--primary);
+        }
+
+        .btn-action.primary:hover {
+            opacity: 0.9;
+        }
+
+        /* Data table */
+        .responsive-table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .data-table th {
+            background-color: var(--bg-main);
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .data-table th .col-type {
+            font-size: 10px;
+            font-weight: 400;
+            opacity: 0.7;
+            text-transform: uppercase;
+            margin-left: 4px;
+        }
+
+        .data-table td {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            color: var(--text-main);
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .data-table tr:hover td {
+            background-color: rgba(67, 24, 255, 0.02);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-admin {
+            background-color: #E9E3FF;
+            color: #4318FF;
+        }
+
+        .badge-user {
+            background-color: #E2E8F0;
+            color: #718096;
+        }
+
+        .badge-paid {
+            background-color: #E2FFED;
+            color: #05CD99;
+        }
+
+        .badge-pending {
+            background-color: #FFF6E5;
+            color: #FFB547;
+        }
+
+        .badge-bill {
+            background-color: #FEEFEE;
+            color: #EE5D50;
+        }
+
+        .amount-pos {
+            color: var(--success);
+            font-weight: 600;
+        }
+
+        .amount-neg {
+            color: var(--danger);
+            font-weight: 600;
+        }
+
+        .btn-row-delete {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-row-delete:hover {
+            color: var(--danger);
+            background-color: #FEEFEE;
+        }
+
+        /* Schema Toggle Section */
+        .schema-summary-box {
+            margin-top: 20px;
+            padding: 16px;
+            background-color: var(--bg-main);
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .schema-summary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .schema-pill-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .schema-pill {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 11px;
+        }
+
+        .schema-pill .pk-indicator {
+            color: #FFB547;
+            font-weight: bold;
+        }
+
+        /* Admin Switch Banner */
+        .admin-switch-banner {
+            background: linear-gradient(135deg, rgba(67, 24, 255, 0.08) 0%, rgba(5, 205, 153, 0.08) 100%);
+            border: 1px solid rgba(67, 24, 255, 0.2);
+            border-radius: 14px;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .admin-switch-banner .banner-text {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .admin-switch-banner i {
+            font-size: 20px;
+            color: var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+    <script>
+        if (savedTheme && savedTheme !== 'light') {
+            document.body.classList.add(`theme-${savedTheme}`);
+        }
+    </script>
+    <div class="dashboard">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo">
+                <i class="fa-solid fa-wallet"></i>
+                <h2>Yadav & Jain Company</h2>
+            </div>
+            <nav>
+                <a href="/"><i class="fa-solid fa-chart-pie"></i> <span class="i18n-text">Dashboard</span></a>
+                <a href="/transactions"><i class="fa-solid fa-money-bill-transfer"></i> <span class="i18n-text">Transactions</span></a>
+                <a href="/calendar"><i class="fa-solid fa-calendar-days"></i> <span class="i18n-text">Calendar</span></a>
+                <a href="/reports"><i class="fa-solid fa-chart-line"></i> <span class="i18n-text">Reports</span></a>
+                <a href="/settings"><i class="fa-solid fa-gear"></i> <span class="i18n-text">Settings</span></a>
+                <a href="/admin" class="active"><i class="fa-solid fa-database"></i> <span class="i18n-text">Admin Dashboard</span></a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="topbar">
+                <div class="search-bar" style="visibility: hidden;">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text">
+                </div>
+                <div class="user-profile">
+                    <div class="avatar" style="background-color: var(--primary); color: white;">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <span id="topbar-username">bhoomi (Admin)</span>
+                </div>
+            </header>
+
+            <div class="content">
+                <!-- Admin Header -->
+                <div class="admin-header">
+                    <div>
+                        <div class="admin-title-badge">
+                            <i class="fa-solid fa-shield-halved"></i> Database & System Administration
+                        </div>
+                        <h1>All Database Tables Dashboard</h1>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <a href="/db" class="btn-action" style="text-decoration: none; border-color: var(--primary); color: var(--primary);">
+                            <i class="fa-solid fa-server"></i> Standalone DB Studio
+                        </a>
+                        <button class="btn-action" onclick="refreshAdminData()">
+                            <i class="fa-solid fa-rotate" id="refresh-icon"></i> Refresh Data
+                        </button>
+                        <a href="/" class="btn-action primary" style="text-decoration: none;">
+                            <i class="fa-solid fa-arrow-left"></i> Personal View
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Admin Status Banner -->
+                <div class="admin-switch-banner" id="admin-banner">
+                    <div class="banner-text">
+                        <i class="fa-solid fa-circle-check"></i>
+                        <div>
+                            <strong>Admin User: bhoomi</strong> &bull; Full CRUD permissions enabled on database <code>MyPersonalTracker</code>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn-action" style="padding: 6px 14px; font-size: 12px;" onclick="loginAsBhoomi()">
+                            <i class="fa-solid fa-key"></i> Switch Session to bhoomi
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bento KPI Stats Grid -->
+                <div class="bento-stats-grid" id="bento-stats">
+                    <div class="bento-stat-card" onclick="switchTable('Users')">
+                        <div class="bento-icon users"><i class="fa-solid fa-users"></i></div>
+                        <div class="bento-info">
+                            <h4>Users</h4>
+                            <div class="stat-value" id="stat-users">-</div>
+                            <div class="sub-stat" id="stat-admins-sub">- admins</div>
+                        </div>
+                    </div>
+                    <div class="bento-stat-card" onclick="switchTable('Wallet')">
+                        <div class="bento-icon wallet"><i class="fa-solid fa-wallet"></i></div>
+                        <div class="bento-info">
+                            <h4>Wallet (Income)</h4>
+                            <div class="stat-value" id="stat-wallet-amt">-</div>
+                            <div class="sub-stat" id="stat-wallet-cnt">- records</div>
+                        </div>
+                    </div>
+                    <div class="bento-stat-card" onclick="switchTable('Expenses')">
+                        <div class="bento-icon expenses"><i class="fa-solid fa-receipt"></i></div>
+                        <div class="bento-info">
+                            <h4>Expenses</h4>
+                            <div class="stat-value" id="stat-expenses-amt">-</div>
+                            <div class="sub-stat" id="stat-expenses-cnt">- records</div>
+                        </div>
+                    </div>
+                    <div class="bento-stat-card" onclick="switchTable('Reminders')">
+                        <div class="bento-icon reminders"><i class="fa-solid fa-calendar-check"></i></div>
+                        <div class="bento-info">
+                            <h4>Reminders</h4>
+                            <div class="stat-value" id="stat-reminders-cnt">-</div>
+                            <div class="sub-stat" id="stat-reminders-pending">- pending</div>
+                        </div>
+                    </div>
+                    <div class="bento-stat-card" onclick="switchTable('ActivityLogs')">
+                        <div class="bento-icon activities"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                        <div class="bento-info">
+                            <h4>Audit Logs</h4>
+                            <div class="stat-value" id="stat-activities-cnt">-</div>
+                            <div class="sub-stat" id="stat-activities-sub">Recorded events</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table Navigation Tabs -->
+                <div class="table-tabs-container">
+                    <button class="tab-btn active" id="tab-Users" onclick="switchTable('Users')">
+                        <i class="fa-solid fa-users"></i> Users <span class="tab-badge" id="badge-Users">0</span>
+                    </button>
+                    <button class="tab-btn" id="tab-Wallet" onclick="switchTable('Wallet')">
+                        <i class="fa-solid fa-wallet"></i> Wallet <span class="tab-badge" id="badge-Wallet">0</span>
+                    </button>
+                    <button class="tab-btn" id="tab-Expenses" onclick="switchTable('Expenses')">
+                        <i class="fa-solid fa-receipt"></i> Expenses <span class="tab-badge" id="badge-Expenses">0</span>
+                    </button>
+                    <button class="tab-btn" id="tab-Reminders" onclick="switchTable('Reminders')">
+                        <i class="fa-solid fa-calendar-check"></i> Reminders <span class="tab-badge" id="badge-Reminders">0</span>
+                    </button>
+                    <button class="tab-btn" id="tab-ActivityLogs" onclick="switchTable('ActivityLogs')">
+                        <i class="fa-solid fa-clock-rotate-left"></i> Activity Logs <span class="tab-badge" id="badge-ActivityLogs">0</span>
+                    </button>
+                </div>
+
+                <!-- Main Table Viewer Card -->
+                <div class="table-view-card">
+                    <div class="table-toolbar">
+                        <div class="table-search-box">
+                            <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted);"></i>
+                            <input type="text" id="table-search" placeholder="Filter rows in current table..." oninput="filterTableRows()">
+                        </div>
+                        <div class="table-actions">
+                            <span id="row-counter" style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Showing 0 rows</span>
+                            <button class="btn-action" onclick="exportCurrentTableCSV()">
+                                <i class="fa-solid fa-file-csv"></i> Export CSV
+                            </button>
+                            <button class="btn-action" onclick="exportCurrentTableJSON()">
+                                <i class="fa-solid fa-code"></i> JSON
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Responsive Table -->
+                    <div class="responsive-table-wrapper">
+                        <table class="data-table" id="active-data-table">
+                            <thead id="data-table-head">
+                                <tr><th>Loading schema...</th></tr>
+                            </thead>
+                            <tbody id="data-table-body">
+                                <tr><td style="text-align: center; padding: 30px; color: var(--text-muted);">Loading records...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Schema Inspector Pill Box -->
+                    <div class="schema-summary-box">
+                        <div class="schema-summary-header" onclick="toggleSchemaDetails()">
+                            <span><i class="fa-solid fa-table-columns"></i> Table Schema & Column Types: <strong id="schema-table-name">Users</strong></span>
+                            <i class="fa-solid fa-chevron-down" id="schema-chevron"></i>
+                        </div>
+                        <div class="schema-pill-list" id="schema-pill-list"></div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentActiveTable = 'Users';
+        let currentTableData = null;
+        let allOverviewData = null;
+
+        // Auto-initialize admin state
+        async function checkAdminSession() {
+            const userName = localStorage.getItem('userName');
+            const isAdmin = localStorage.getItem('isAdmin');
+            
+            // If already bhoomi or isAdmin
+            if (userName === 'bhoomi' || isAdmin === 'true') {
+                document.getElementById('topbar-username').textContent = 'bhoomi (Admin)';
+            }
+        }
+
+        async function loginAsBhoomi() {
+            try {
+                const res = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: 'bhoomi', password: 'password' })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    localStorage.setItem('userId', data.user_id);
+                    localStorage.setItem('userName', data.username);
+                    localStorage.setItem('isAdmin', 'true');
+                    document.getElementById('topbar-username').textContent = 'bhoomi (Admin)';
+                    alert('Session switched to bhoomi (Admin).');
+                    refreshAdminData();
+                } else {
+                    alert('Could not switch session: ' + (data.message || 'Error'));
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // Fetch Overview Stats
+        async function loadOverview() {
+            try {
+                const res = await fetch('/api/admin/overview');
+                if (res.ok) {
+                    allOverviewData = await res.json();
+                    const stats = allOverviewData.stats;
+                    
+                    document.getElementById('stat-users').textContent = stats.total_users;
+                    document.getElementById('stat-admins-sub').textContent = `${stats.total_admins} admin, ${stats.total_users - stats.total_admins} regular`;
+                    
+                    document.getElementById('stat-wallet-amt').textContent = `₹${stats.total_income.toLocaleString('en-IN')}`;
+                    document.getElementById('stat-wallet-cnt').textContent = `${stats.income_records} inflow records`;
+                    
+                    document.getElementById('stat-expenses-amt').textContent = `₹${stats.total_expenses.toLocaleString('en-IN')}`;
+                    document.getElementById('stat-expenses-cnt').textContent = `${stats.expense_records} transactions`;
+                    
+                    document.getElementById('stat-reminders-cnt').textContent = stats.total_reminders;
+                    document.getElementById('stat-reminders-pending').textContent = `${stats.pending_reminders} pending, ${stats.paid_reminders} paid`;
+
+                    const actEl = document.getElementById('stat-activities-cnt');
+                    if (actEl) actEl.textContent = stats.total_activities || 0;
+
+                    // Update Tab Badges
+                    allOverviewData.tables.forEach(t => {
+                        const badge = document.getElementById(`badge-${t.name}`);
+                        if (badge) badge.textContent = t.count;
+                    });
+                }
+            } catch (err) {
+                console.error("Error loading overview:", err);
+            }
+        }
+
+        // Switch Active Table
+        async function switchTable(tableName) {
+            currentActiveTable = tableName;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            const activeTab = document.getElementById(`tab-${tableName}`);
+            if (activeTab) activeTab.classList.add('active');
+            
+            document.getElementById('table-search').value = '';
+            document.getElementById('schema-table-name').textContent = tableName;
+            
+            await loadTable(tableName);
+        }
+
+        // Fetch Table Data and Schema
+        async function loadTable(tableName) {
+            const thead = document.getElementById('data-table-head');
+            const tbody = document.getElementById('data-table-body');
+            tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; padding: 30px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading ${tableName} records...</td></tr>`;
+
+            try {
+                const res = await fetch(`/api/admin/tables/${tableName}`);
+                if (res.ok) {
+                    currentTableData = await res.json();
+                    renderTable(currentTableData.rows);
+                    renderSchemaPills(currentTableData.columns, currentTableData.primary_key);
+                } else {
+                    const err = await res.json();
+                    tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--danger); padding: 30px;">Error: ${err.error}</td></tr>`;
+                }
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="10" style="text-align: center; color: var(--danger); padding: 30px;">Failed to fetch table data.</td></tr>`;
+            }
+        }
+
+        // Render Table Headers & Rows
+        function renderTable(rows) {
+            const thead = document.getElementById('data-table-head');
+            const tbody = document.getElementById('data-table-body');
+            const cols = currentTableData.columns;
+            const pk = currentTableData.primary_key;
+
+            document.getElementById('row-counter').textContent = `Showing ${rows.length} of ${currentTableData.total_rows} rows`;
+
+            // Build Header
+            let headerHtml = '<tr>';
+            cols.forEach(c => {
+                headerHtml += `<th>${c.name} <span class="col-type">${c.type}</span></th>`;
+            });
+            headerHtml += '<th style="text-align: center;">Actions</th></tr>';
+            thead.innerHTML = headerHtml;
+
+            // Build Body
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${cols.length + 1}" style="text-align: center; padding: 30px; color: var(--text-muted);">No records found in ${currentActiveTable}.</td></tr>`;
+                return;
+            }
+
+            let bodyHtml = '';
+            rows.forEach(row => {
+                bodyHtml += '<tr>';
+                cols.forEach(c => {
+                    const val = row[c.name];
+                    let formatted = formatCellValue(c.name, val, row);
+                    bodyHtml += `<td>${formatted}</td>`;
+                });
+
+                // Row action (Delete)
+                const recordId = row[pk];
+                bodyHtml += `
+                    <td style="text-align: center;">
+                        <button class="btn-row-delete" title="Delete Record #${recordId}" onclick="deleteRecord('${currentActiveTable}', ${recordId})">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = bodyHtml;
+        }
+
+        // Format Cells nicely
+        function formatCellValue(colName, val, row) {
+            if (val === null || val === undefined) {
+                return '<span style="color: var(--text-muted); font-style: italic;">NULL</span>';
+            }
+
+            if (colName === 'is_admin') {
+                return val == 1 
+                    ? '<span class="badge badge-admin"><i class="fa-solid fa-shield"></i> Admin</span>'
+                    : '<span class="badge badge-user">User</span>';
+            }
+
+            if (colName === 'status') {
+                return val === 'paid'
+                    ? '<span class="badge badge-paid"><i class="fa-solid fa-check"></i> Paid</span>'
+                    : '<span class="badge badge-pending"><i class="fa-solid fa-clock"></i> Pending</span>';
+            }
+
+            if (colName === 'is_bill' || colName === 'is_paid') {
+                return val == 1 
+                    ? '<span class="badge badge-paid">Yes</span>' 
+                    : '<span class="badge badge-user">No</span>';
+            }
+
+            if (colName === 'amount') {
+                const isExpense = currentActiveTable === 'Expenses';
+                const cls = isExpense ? 'amount-neg' : 'amount-pos';
+                const prefix = isExpense ? '-' : '+';
+                return `<span class="${cls}">${prefix}₹${parseFloat(val).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</span>`;
+            }
+
+            if (colName === 'password') {
+                return `<span style="font-family: monospace; letter-spacing: 2px;">••••••••</span>`;
+            }
+
+            return String(val);
+        }
+
+        // Render Schema Pills
+        function renderSchemaPills(columns, pk) {
+            const list = document.getElementById('schema-pill-list');
+            list.innerHTML = columns.map(c => {
+                const isPk = c.name === pk;
+                const star = isPk ? '<span class="pk-indicator"><i class="fa-solid fa-key"></i> PK</span> ' : '';
+                return `<div class="schema-pill">${star}<strong>${c.name}</strong> <span style="color: var(--text-muted);">(${c.type})</span></div>`;
+            }).join('');
+        }
+
+        function toggleSchemaDetails() {
+            const pillList = document.getElementById('schema-pill-list');
+            const chevron = document.getElementById('schema-chevron');
+            if (pillList.style.display === 'none') {
+                pillList.style.display = 'flex';
+                chevron.className = 'fa-solid fa-chevron-up';
+            } else {
+                pillList.style.display = 'none';
+                chevron.className = 'fa-solid fa-chevron-down';
+            }
+        }
+
+        // Filter Rows via Search Input
+        function filterTableRows() {
+            if (!currentTableData || !currentTableData.rows) return;
+            const query = document.getElementById('table-search').value.toLowerCase().trim();
+            if (!query) {
+                renderTable(currentTableData.rows);
+                return;
+            }
+
+            const filtered = currentTableData.rows.filter(row => {
+                return Object.values(row).some(v => v !== null && String(v).toLowerCase().includes(query));
+            });
+
+            renderTable(filtered);
+        }
+
+        // Delete Individual Record
+        async function deleteRecord(tableName, recordId) {
+            if (!confirm(`Are you sure you want to permanently delete record #${recordId} from table '${tableName}'?`)) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/api/admin/tables/${tableName}/${recordId}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    await loadOverview();
+                    await loadTable(tableName);
+                } else {
+                    alert('Error deleting record: ' + (data.error || 'Failed'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('An error occurred during deletion.');
+            }
+        }
+
+        // Export CSV
+        function exportCurrentTableCSV() {
+            if (!currentTableData || !currentTableData.rows || currentTableData.rows.length === 0) {
+                alert('No data to export.');
+                return;
+            }
+
+            const cols = currentTableData.columns.map(c => c.name);
+            let csv = cols.join(',') + '\n';
+
+            currentTableData.rows.forEach(r => {
+                const rowStr = cols.map(c => {
+                    let val = r[c] === null ? '' : String(r[c]);
+                    if (val.includes(',') || val.includes('"') || val.includes('\n')) {
+                        val = `"${val.replace(/"/g, '""')}"`;
+                    }
+                    return val;
+                }).join(',');
+                csv += rowStr + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${currentActiveTable}_data.csv`;
+            link.click();
+        }
+
+        // Export JSON
+        function exportCurrentTableJSON() {
+            if (!currentTableData || !currentTableData.rows) {
+                alert('No data to export.');
+                return;
+            }
+
+            const blob = new Blob([JSON.stringify(currentTableData.rows, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${currentActiveTable}_data.json`;
+            link.click();
+        }
+
+        // Refresh All Data
+        async function refreshAdminData() {
+            const icon = document.getElementById('refresh-icon');
+            if (icon) icon.classList.add('fa-spin');
+            await loadOverview();
+            await loadTable(currentActiveTable);
+            if (icon) setTimeout(() => icon.classList.remove('fa-spin'), 500);
+        }
+
+        // Initial Load
+        document.addEventListener('DOMContentLoaded', async () => {
+            await checkAdminSession();
+            await loadOverview();
+            await loadTable('Users');
+        });
+    </script>
+</body>
+
+</html>

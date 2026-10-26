@@ -1,0 +1,1477 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Studio - Yadav & Jain Company</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
+    <style>
+        :root {
+            --bg-base: #0D1117;
+            --bg-surface: #161B22;
+            --bg-card: #21262D;
+            --bg-hover: #30363D;
+            --border: #30363D;
+            --text-primary: #F0F6FC;
+            --text-secondary: #8B949E;
+            --text-muted: #6E7681;
+            --accent-primary: #58A6FF;
+            --accent-success: #3FB950;
+            --accent-warning: #D29922;
+            --accent-danger: #F85149;
+            --accent-purple: #BC8CFF;
+            --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+            --radius-lg: 14px;
+        }
+
+        body.theme-light {
+            --bg-base: #F6F8FA;
+            --bg-surface: #FFFFFF;
+            --bg-card: #FFFFFF;
+            --bg-hover: #F3F4F6;
+            --border: #D0D7DE;
+            --text-primary: #1F2328;
+            --text-secondary: #656D76;
+            --text-muted: #8C959F;
+            --accent-primary: #0969DA;
+            --accent-success: #1A7F37;
+            --accent-warning: #9A6700;
+            --accent-danger: #CF222E;
+            --accent-purple: #8250DF;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body, button, input, select, textarea {
+            font-family: var(--font-sans);
+        }
+
+        .fa, .fas, .far, .fab, .fa-solid, .fa-regular, .fa-brands, [class*="fa-"] {
+            font-family: "Font Awesome 6 Free", "Font Awesome 6 Brands", "FontAwesome" !important;
+            font-style: normal;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .db-sidebar {
+            width: 270px;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            flex-shrink: 0;
+            user-select: none;
+        }
+
+        .db-logo {
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .db-logo i {
+            font-size: 22px;
+            color: var(--accent-purple);
+        }
+
+        .db-logo-text h2 {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+
+        .db-logo-text span {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .db-nav-section {
+            padding: 16px 12px 8px;
+        }
+
+        .db-nav-heading {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            padding: 0 10px 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 9px 12px;
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            margin-bottom: 3px;
+        }
+
+        .nav-item:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background-color: rgba(88, 166, 255, 0.12);
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .nav-item-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item-left i {
+            font-size: 14px;
+            width: 18px;
+            text-align: center;
+        }
+
+        .badge-count {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 1px 7px;
+            border-radius: 10px;
+            font-family: var(--font-mono);
+        }
+
+        .nav-item.active .badge-count {
+            background-color: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        .db-sidebar-footer {
+            margin-top: auto;
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: var(--bg-card);
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            font-size: 12px;
+        }
+
+        .user-chip-name {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+
+        .btn-link-app {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background-color: transparent;
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .btn-link-app:hover {
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+            border-color: var(--accent-primary);
+        }
+
+        /* Main Workspace */
+        .db-workspace {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .db-topbar {
+            height: 60px;
+            background-color: var(--bg-surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            flex-shrink: 0;
+        }
+
+        .connection-pill {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-family: var(--font-mono);
+            color: var(--text-secondary);
+        }
+
+        .connection-pill .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: var(--accent-success);
+            box-shadow: 0 0 8px var(--accent-success);
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-tool {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 7px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-tool:hover {
+            background-color: var(--bg-hover);
+            border-color: var(--accent-primary);
+        }
+
+        .btn-tool.primary {
+            background-color: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+
+        .btn-tool.primary:hover {
+            opacity: 0.9;
+        }
+
+        /* Content Views */
+        .db-content {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .view-panel {
+            display: none;
+        }
+
+        .view-panel.active {
+            display: block;
+        }
+
+        /* Overview Bento Cards */
+        .overview-kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-stat-box {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .kpi-stat-box .kpi-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .kpi-stat-box .kpi-val {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+        }
+
+        .kpi-stat-box .kpi-sub {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .section-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .tables-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 18px;
+            margin-bottom: 28px;
+        }
+
+        .table-summary-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .table-summary-card:hover {
+            border-color: var(--accent-primary);
+            transform: translateY(-2px);
+        }
+
+        .table-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .table-card-title i {
+            color: var(--accent-primary);
+        }
+
+        .table-card-stats {
+            display: flex;
+            gap: 16px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+        }
+
+        .table-card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+        }
+
+        /* Explorer Toolbar */
+        .explorer-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 12px 18px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .search-input-wrap {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 6px 12px;
+            width: 300px;
+            max-width: 100%;
+        }
+
+        .search-input-wrap input {
+            background: none;
+            border: none;
+            outline: none;
+            color: var(--text-primary);
+            font-size: 13px;
+            width: 100%;
+        }
+
+        /* Data Grid Container */
+        .grid-panel {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .table-scroll-container {
+            width: 100%;
+            overflow-x: auto;
+            max-height: calc(100vh - 280px);
+        }
+
+        .studio-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        .studio-table th {
+            background-color: var(--bg-card);
+            color: var(--text-secondary);
+            font-weight: 600;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            white-space: nowrap;
+            z-index: 2;
+        }
+
+        .studio-table th .type-tag {
+            font-family: var(--font-mono);
+            font-size: 10px;
+            color: var(--accent-purple);
+            font-weight: 400;
+            margin-left: 6px;
+        }
+
+        .studio-table td {
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            color: var(--text-primary);
+            white-space: nowrap;
+            font-family: var(--font-mono);
+            font-size: 12px;
+        }
+
+        .studio-table tr:hover td {
+            background-color: var(--bg-card);
+        }
+
+        .cell-null {
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .cell-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            font-family: var(--font-sans);
+        }
+
+        .cell-badge.admin {
+            background-color: rgba(188, 140, 255, 0.15);
+            color: var(--accent-purple);
+        }
+
+        .cell-badge.paid {
+            background-color: rgba(63, 185, 80, 0.15);
+            color: var(--accent-success);
+        }
+
+        .cell-badge.pending {
+            background-color: rgba(210, 153, 34, 0.15);
+            color: var(--accent-warning);
+        }
+
+        .action-cell {
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .btn-icon-op {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 5px 7px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            transition: all 0.15s ease;
+        }
+
+        .btn-icon-op:hover {
+            color: var(--text-primary);
+            background-color: var(--bg-hover);
+        }
+
+        .btn-icon-op.del:hover {
+            color: var(--accent-danger);
+            background-color: rgba(248, 81, 73, 0.15);
+        }
+
+        /* SQL Console */
+        .sql-console-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            height: calc(100vh - 120px);
+        }
+
+        .sql-editor-card {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .sql-textarea {
+            width: 100%;
+            height: 140px;
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 14px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 13px;
+            line-height: 1.5;
+            resize: vertical;
+            outline: none;
+        }
+
+        .sql-textarea:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .sql-templates-bar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .chip-query {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 4px 10px;
+            border-radius: 14px;
+            font-size: 11px;
+            font-family: var(--font-mono);
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .chip-query:hover {
+            color: var(--accent-primary);
+            border-color: var(--accent-primary);
+        }
+
+        .sql-results-card {
+            flex: 1;
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .results-header {
+            padding: 12px 18px;
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .error-banner {
+            padding: 14px 18px;
+            background-color: rgba(248, 81, 73, 0.15);
+            border-bottom: 1px solid var(--accent-danger);
+            color: var(--accent-danger);
+            font-size: 13px;
+            font-family: var(--font-mono);
+            display: none;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .modal-box {
+            background-color: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            width: 520px;
+            max-width: 90%;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-head {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-head h3 {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .form-row {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-row label {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .form-row input,
+        .form-row select,
+        .form-row textarea {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            outline: none;
+        }
+
+        .form-row input:focus,
+        .form-row select:focus,
+        .form-row textarea:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .modal-foot {
+            padding: 14px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <aside class="db-sidebar">
+        <div class="db-logo">
+            <i class="fa-solid fa-database"></i>
+            <div class="db-logo-text">
+                <h2>Database Studio</h2>
+                <span>MySQL 8.0 &bull; Yadav & Jain Company</span>
+            </div>
+        </div>
+
+        <div class="db-nav-section">
+            <div class="db-nav-heading">Studio Views</div>
+            <div class="nav-item active" id="nav-overview" onclick="openStudioView('overview')">
+                <div class="nav-item-left">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>DB Overview</span>
+                </div>
+            </div>
+            <div class="nav-item" id="nav-sql" onclick="openStudioView('sql')">
+                <div class="nav-item-left">
+                    <i class="fa-solid fa-terminal"></i>
+                    <span>SQL Query Console</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="db-nav-section">
+            <div class="db-nav-heading">Tables Explorer</div>
+            <div class="nav-item" id="nav-table-Users" onclick="openTableView('Users')">
+                <div class="nav-item-left">
+                    <i class="fa-solid fa-users"></i>
+                    <span>Users</span>
+                </div>
+                <span class="badge-count" id="count-Users">0</span>
+            </div>
+            <div class="nav-item" id="nav-table-Wallet" onclick="openTableView('Wallet')">
+                <div class="nav-item-left">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span>Wallet</span>
+                </div>
+                <span class="badge-count" id="count-Wallet">0</span>
+            </div>
+            <div class="nav-item" id="nav-table-Expenses" onclick="openTableView('Expenses')">
+                <div class="nav-item-left">
+                    <i class="fa-solid fa-receipt"></i>
+                    <span>Expenses</span>
+                </div>
+                <span class="badge-count" id="count-Expenses">0</span>
+            </div>
+            <div class="nav-item" id="nav-table-Reminders" onclick="openTableView('Reminders')">
+                <div class="nav-item-left">
+                    <i class="fa-solid fa-calendar-check"></i>
+                    <span>Reminders</span>
+                </div>
+                <span class="badge-count" id="count-Reminders">0</span>
+            </div>
+        </div>
+
+        <div class="db-sidebar-footer">
+            <div class="user-chip">
+                <div class="user-chip-name">
+                    <i class="fa-solid fa-shield-halved" style="color: var(--accent-purple);"></i>
+                    <span>bhoomi (Admin)</span>
+                </div>
+                <span style="font-size: 10px; color: var(--accent-success); font-weight: 700;">LIVE</span>
+            </div>
+            <a href="/" class="btn-link-app">
+                <i class="fa-solid fa-arrow-left"></i> Personal Finance App
+            </a>
+        </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="db-workspace">
+        <header class="db-topbar">
+            <div class="connection-pill">
+                <span class="dot"></span>
+                <span>Connected: <strong>127.0.0.1:3306</strong> / <strong>MyPersonalTracker</strong></span>
+            </div>
+            <div class="topbar-actions">
+                <button class="btn-tool" onclick="toggleTheme()" id="theme-btn">
+                    <i class="fa-solid fa-moon"></i> Theme
+                </button>
+                <button class="btn-tool" onclick="refreshStudioData()">
+                    <i class="fa-solid fa-rotate" id="refresh-icon"></i> Refresh
+                </button>
+                <button class="btn-tool primary" onclick="openNewRecordModal()">
+                    <i class="fa-solid fa-plus"></i> Insert Row
+                </button>
+            </div>
+        </header>
+
+        <div class="db-content">
+            <!-- View 1: Database Overview -->
+            <div class="view-panel active" id="view-overview">
+                <div class="overview-kpis">
+                    <div class="kpi-stat-box">
+                        <span class="kpi-label">Database Name</span>
+                        <span class="kpi-val" id="kpi-dbname">MyPersonalTracker</span>
+                        <span class="kpi-sub" id="kpi-version">MySQL 8.0</span>
+                    </div>
+                    <div class="kpi-stat-box">
+                        <span class="kpi-label">Total Tables</span>
+                        <span class="kpi-val" id="kpi-total-tables">4</span>
+                        <span class="kpi-sub">InnoDB storage engine</span>
+                    </div>
+                    <div class="kpi-stat-box">
+                        <span class="kpi-label">Total Live Rows</span>
+                        <span class="kpi-val" id="kpi-total-rows">0</span>
+                        <span class="kpi-sub">Across all tables</span>
+                    </div>
+                    <div class="kpi-stat-box">
+                        <span class="kpi-label">Total Storage</span>
+                        <span class="kpi-val" id="kpi-total-size">128 KB</span>
+                        <span class="kpi-sub">Data & indexes</span>
+                    </div>
+                </div>
+
+                <div class="section-header">
+                    <h3>Database Tables (Schema Overview)</h3>
+                    <span style="font-size: 12px; color: var(--text-secondary);">Click any table to browse data or run queries</span>
+                </div>
+
+                <div class="tables-cards-grid" id="tables-cards-container">
+                    <!-- Populated via JS -->
+                </div>
+            </div>
+
+            <!-- View 2: Table Explorer (Data Grid) -->
+            <div class="view-panel" id="view-explorer">
+                <div class="explorer-bar">
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        <h2 id="explorer-table-title" style="font-size: 18px; font-weight: 700;">Users</h2>
+                        <span class="badge-count" id="explorer-row-count">0 rows</span>
+                    </div>
+
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <div class="search-input-wrap">
+                            <i class="fa-solid fa-magnifying-glass" style="color: var(--text-muted); font-size: 12px;"></i>
+                            <input type="text" id="explorer-search" placeholder="Filter rows in this table..." oninput="filterActiveRows()">
+                        </div>
+                        <button class="btn-tool" onclick="exportActiveCSV()">
+                            <i class="fa-solid fa-file-csv"></i> CSV
+                        </button>
+                        <button class="btn-tool" onclick="exportActiveJSON()">
+                            <i class="fa-solid fa-code"></i> JSON
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid-panel">
+                    <div class="table-scroll-container">
+                        <table class="studio-table" id="studio-grid-table">
+                            <thead id="grid-thead"></thead>
+                            <tbody id="grid-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- View 3: SQL Query Console -->
+            <div class="view-panel" id="view-sql">
+                <div class="sql-console-wrap">
+                    <div class="sql-editor-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-size: 13px; font-weight: 600;"><i class="fa-solid fa-terminal" style="color: var(--accent-purple);"></i> SQL Query Editor</span>
+                            <button class="btn-tool primary" onclick="runSqlQuery()">
+                                <i class="fa-solid fa-play"></i> Run Query (Ctrl+Enter)
+                            </button>
+                        </div>
+                        <textarea class="sql-textarea" id="sql-query-input" placeholder="Enter your SQL query (e.g. SELECT * FROM Users;)">SELECT * FROM Users;</textarea>
+                        <div class="sql-templates-bar">
+                            <span style="font-size: 11px; color: var(--text-muted); font-weight: 600;">Templates:</span>
+                            <span class="chip-query" onclick="setSql('SELECT * FROM Users;')">Users</span>
+                            <span class="chip-query" onclick="setSql('SELECT * FROM Wallet ORDER BY created_at DESC;')">Wallet</span>
+                            <span class="chip-query" onclick="setSql('SELECT * FROM Expenses ORDER BY amount DESC;')">Expenses</span>
+                            <span class="chip-query" onclick="setSql('SELECT category, SUM(amount) as total FROM Expenses GROUP BY category;')">Expenses by Category</span>
+                            <span class="chip-query" onclick="setSql('SELECT * FROM Reminders WHERE status = \'pending\';')">Pending Reminders</span>
+                        </div>
+                    </div>
+
+                    <div class="sql-results-card">
+                        <div class="results-header">
+                            <span id="sql-status-msg">Ready to execute query</span>
+                            <span id="sql-time-badge" style="font-family: var(--font-mono);">0.0 ms</span>
+                        </div>
+                        <div class="error-banner" id="sql-error-banner"></div>
+                        <div class="table-scroll-container">
+                            <table class="studio-table" id="sql-results-table">
+                                <thead id="sql-thead"></thead>
+                                <tbody id="sql-tbody">
+                                    <tr><td style="text-align: center; color: var(--text-muted); padding: 30px;">Execute a query above to inspect results.</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Dynamic Insert / Edit Record Modal -->
+    <div class="modal-overlay" id="record-modal">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h3 id="modal-title">Insert New Record</h3>
+                <button class="btn-icon-op" onclick="closeRecordModal()"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="record-form" onsubmit="event.preventDefault(); submitRecordModal();">
+                <div class="modal-body" id="modal-form-fields"></div>
+                <div class="modal-foot">
+                    <button type="button" class="btn-tool" onclick="closeRecordModal()">Cancel</button>
+                    <button type="submit" class="btn-tool primary" id="modal-submit-btn">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let studioHealth = null;
+        let activeTableName = 'Users';
+        let activeTablePayload = null;
+        let editingRecordId = null;
+
+        // View Management
+        function openStudioView(viewName) {
+            document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+
+            const panel = document.getElementById(`view-${viewName}`);
+            if (panel) panel.classList.add('active');
+
+            const navItem = document.getElementById(`nav-${viewName}`);
+            if (navItem) navItem.classList.add('active');
+        }
+
+        async function openTableView(tableName) {
+            activeTableName = tableName;
+            openStudioView('explorer');
+            
+            document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            const tableNav = document.getElementById(`nav-table-${tableName}`);
+            if (tableNav) tableNav.classList.add('active');
+
+            await loadExplorerTable(tableName);
+        }
+
+        // Theme Toggle
+        function toggleTheme() {
+            document.body.classList.toggle('theme-light');
+            const isLight = document.body.classList.contains('theme-light');
+            localStorage.setItem('studio_theme', isLight ? 'light' : 'dark');
+        }
+
+        // Health & Overview
+        async function loadStudioHealth() {
+            try {
+                const res = await fetch('/api/db/health');
+                if (res.ok) {
+                    studioHealth = await res.json();
+                    document.getElementById('kpi-dbname').textContent = studioHealth.database;
+                    document.getElementById('kpi-version').textContent = `MySQL ${studioHealth.version}`;
+                    document.getElementById('kpi-total-tables').textContent = studioHealth.total_tables;
+                    document.getElementById('kpi-total-rows').textContent = studioHealth.total_rows;
+                    document.getElementById('kpi-total-size').textContent = `${studioHealth.total_size_kb} KB`;
+
+                    // Update Table Badges & Cards
+                    const container = document.getElementById('tables-cards-container');
+                    container.innerHTML = '';
+
+                    studioHealth.tables.forEach(t => {
+                        const badge = document.getElementById(`count-${t.name}`);
+                        if (badge) badge.textContent = t.rows;
+
+                        const iconMap = {
+                            'Users': 'fa-users',
+                            'Wallet': 'fa-wallet',
+                            'Expenses': 'fa-receipt',
+                            'Reminders': 'fa-calendar-check'
+                        };
+                        const icon = iconMap[t.name] || 'fa-table';
+
+                        const card = document.createElement('div');
+                        card.className = 'table-summary-card';
+                        card.innerHTML = `
+                            <div class="table-card-top">
+                                <div class="table-card-title">
+                                    <i class="fa-solid ${icon}"></i>
+                                    <span>${t.name}</span>
+                                </div>
+                                <span class="badge-count">${t.rows} rows</span>
+                            </div>
+                            <div class="table-card-stats">
+                                <span>Data: ${t.data_size_kb} KB</span>
+                                <span>Index: ${t.index_size_kb} KB</span>
+                                <span>Engine: ${t.engine}</span>
+                            </div>
+                            <div class="table-card-actions">
+                                <button class="btn-tool primary" style="font-size: 11px; padding: 5px 10px;" onclick="openTableView('${t.name}')">
+                                    <i class="fa-solid fa-table"></i> Browse Data
+                                </button>
+                                <button class="btn-tool" style="font-size: 11px; padding: 5px 10px;" onclick="quickInsertModal('${t.name}')">
+                                    <i class="fa-solid fa-plus"></i> Insert
+                                </button>
+                                <button class="btn-tool" style="font-size: 11px; padding: 5px 10px;" onclick="setSql('SELECT * FROM ${t.name};'); openStudioView('sql');">
+                                    <i class="fa-solid fa-terminal"></i> Query
+                                </button>
+                            </div>
+                        `;
+                        container.appendChild(card);
+                    });
+                }
+            } catch (err) {
+                console.error("Error loading DB health:", err);
+            }
+        }
+
+        // Table Explorer Grid
+        async function loadExplorerTable(tableName) {
+            document.getElementById('explorer-table-title').textContent = tableName;
+            const thead = document.getElementById('grid-thead');
+            const tbody = document.getElementById('grid-tbody');
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; padding: 30px; color: var(--text-muted);"><i class="fa-solid fa-spinner fa-spin"></i> Loading ${tableName}...</td></tr>`;
+
+            try {
+                const res = await fetch(`/api/admin/tables/${tableName}`);
+                if (res.ok) {
+                    activeTablePayload = await res.json();
+                    document.getElementById('explorer-row-count').textContent = `${activeTablePayload.total_rows} rows`;
+                    renderExplorerRows(activeTablePayload.rows);
+                } else {
+                    const err = await res.json();
+                    tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: var(--accent-danger); padding: 30px;">Error: ${err.error}</td></tr>`;
+                }
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; color: var(--accent-danger); padding: 30px;">Failed to fetch table records.</td></tr>`;
+            }
+        }
+
+        function renderExplorerRows(rows) {
+            const thead = document.getElementById('grid-thead');
+            const tbody = document.getElementById('grid-tbody');
+            const cols = activeTablePayload.columns;
+            const pk = activeTablePayload.primary_key;
+
+            let headerHtml = '<tr>';
+            cols.forEach(c => {
+                const isPk = c.name === pk;
+                const star = isPk ? '<i class="fa-solid fa-key" style="color: var(--accent-warning); margin-right: 4px;"></i>' : '';
+                headerHtml += `<th>${star}${c.name} <span class="type-tag">${c.type}</span></th>`;
+            });
+            headerHtml += '<th style="text-align: center;">Actions</th></tr>';
+            thead.innerHTML = headerHtml;
+
+            if (rows.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="${cols.length + 1}" style="text-align: center; padding: 30px; color: var(--text-muted);">No records found in ${activeTableName}.</td></tr>`;
+                return;
+            }
+
+            let bodyHtml = '';
+            rows.forEach(r => {
+                bodyHtml += '<tr>';
+                cols.forEach(c => {
+                    const val = r[c.name];
+                    bodyHtml += `<td>${formatStudioCell(c.name, val)}</td>`;
+                });
+
+                const id = r[pk];
+                bodyHtml += `
+                    <td class="action-cell">
+                        <button class="btn-icon-op" title="Edit row" onclick="openEditRecordModal(${id})">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button class="btn-icon-op del" title="Delete row" onclick="deleteStudioRecord('${activeTableName}', ${id})">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </td>
+                </tr>`;
+            });
+
+            tbody.innerHTML = bodyHtml;
+        }
+
+        function formatStudioCell(colName, val) {
+            if (val === null || val === undefined) {
+                return '<span class="cell-null">NULL</span>';
+            }
+            if (colName === 'is_admin') {
+                return val == 1 
+                    ? '<span class="cell-badge admin"><i class="fa-solid fa-shield"></i> Admin</span>' 
+                    : '<span style="color: var(--text-muted);">0</span>';
+            }
+            if (colName === 'status') {
+                return val === 'paid' 
+                    ? '<span class="cell-badge paid">paid</span>' 
+                    : '<span class="cell-badge pending">pending</span>';
+            }
+            if (colName === 'password') {
+                return '<span style="letter-spacing: 2px; color: var(--text-muted);">••••••••</span>';
+            }
+            if (colName === 'amount') {
+                return `<strong>₹${parseFloat(val).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</strong>`;
+            }
+            return String(val);
+        }
+
+        function filterActiveRows() {
+            if (!activeTablePayload || !activeTablePayload.rows) return;
+            const query = document.getElementById('explorer-search').value.toLowerCase().trim();
+            if (!query) {
+                renderExplorerRows(activeTablePayload.rows);
+                return;
+            }
+            const filtered = activeTablePayload.rows.filter(r => {
+                return Object.values(r).some(v => v !== null && String(v).toLowerCase().includes(query));
+            });
+            renderExplorerRows(filtered);
+        }
+
+        // Export Data
+        function exportActiveCSV() {
+            if (!activeTablePayload || !activeTablePayload.rows || activeTablePayload.rows.length === 0) {
+                alert('No rows to export.');
+                return;
+            }
+            const cols = activeTablePayload.columns.map(c => c.name);
+            let csv = cols.join(',') + '\n';
+            activeTablePayload.rows.forEach(r => {
+                const line = cols.map(c => {
+                    let v = r[c] === null ? '' : String(r[c]);
+                    if (v.includes(',') || v.includes('"') || v.includes('\n')) {
+                        v = `"${v.replace(/"/g, '""')}"`;
+                    }
+                    return v;
+                }).join(',');
+                csv += line + '\n';
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${activeTableName}_dump.csv`;
+            link.click();
+        }
+
+        function exportActiveJSON() {
+            if (!activeTablePayload || !activeTablePayload.rows) {
+                alert('No rows to export.');
+                return;
+            }
+            const blob = new Blob([JSON.stringify(activeTablePayload.rows, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${activeTableName}_dump.json`;
+            link.click();
+        }
+
+        // Delete Row
+        async function deleteStudioRecord(tableName, recordId) {
+            if (!confirm(`Confirm deletion of record #${recordId} from table '${tableName}'?`)) return;
+            try {
+                const res = await fetch(`/api/admin/tables/${tableName}/${recordId}`, { method: 'DELETE' });
+                const data = await res.json();
+                if (res.ok) {
+                    await loadStudioHealth();
+                    await loadExplorerTable(tableName);
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to delete'));
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        // SQL Query Runner
+        function setSql(q) {
+            document.getElementById('sql-query-input').value = q;
+        }
+
+        async function runSqlQuery() {
+            const query = document.getElementById('sql-query-input').value.trim();
+            if (!query) return;
+
+            const errBanner = document.getElementById('sql-error-banner');
+            const statusMsg = document.getElementById('sql-status-msg');
+            const timeBadge = document.getElementById('sql-time-badge');
+            const thead = document.getElementById('sql-thead');
+            const tbody = document.getElementById('sql-tbody');
+
+            errBanner.style.display = 'none';
+            statusMsg.textContent = 'Executing query...';
+            tbody.innerHTML = `<tr><td colspan="12" style="text-align: center; padding: 25px;"><i class="fa-solid fa-spinner fa-spin"></i> Running query...</td></tr>`;
+
+            try {
+                const res = await fetch('/api/db/query', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query })
+                });
+
+                const data = await res.json();
+                timeBadge.textContent = `${data.duration_ms || 0} ms`;
+
+                if (res.ok && data.success) {
+                    if (data.is_select) {
+                        statusMsg.textContent = `Returned ${data.count} rows in ${data.duration_ms} ms`;
+
+                        let hHtml = '<tr>';
+                        data.columns.forEach(c => hHtml += `<th>${c}</th>`);
+                        hHtml += '</tr>';
+                        thead.innerHTML = hHtml;
+
+                        if (data.rows.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="12" style="text-align: center; padding: 25px; color: var(--text-muted);">Empty result set.</td></tr>';
+                        } else {
+                            let bHtml = '';
+                            data.rows.forEach(r => {
+                                bHtml += '<tr>';
+                                data.columns.forEach(c => {
+                                    const val = r[c] === null ? '<span class="cell-null">NULL</span>' : String(r[c]);
+                                    bHtml += `<td>${val}</td>`;
+                                });
+                                bHtml += '</tr>';
+                            });
+                            tbody.innerHTML = bHtml;
+                        }
+                    } else {
+                        statusMsg.textContent = data.message;
+                        thead.innerHTML = '';
+                        tbody.innerHTML = `<tr><td style="color: var(--accent-success); padding: 25px;"><i class="fa-solid fa-circle-check"></i> ${data.message}</td></tr>`;
+                        await loadStudioHealth();
+                    }
+                } else {
+                    statusMsg.textContent = 'Query failed';
+                    errBanner.textContent = data.error || 'SQL Error occurred';
+                    errBanner.style.display = 'block';
+                    tbody.innerHTML = '';
+                    thead.innerHTML = '';
+                }
+            } catch (err) {
+                statusMsg.textContent = 'Network error';
+                errBanner.textContent = String(err);
+                errBanner.style.display = 'block';
+            }
+        }
+
+        // Hotkey: Ctrl+Enter executes SQL
+        document.getElementById('sql-query-input').addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                runSqlQuery();
+            }
+        });
+
+        // Dynamic Insert / Edit Modal
+        function quickInsertModal(tableName) {
+            activeTableName = tableName;
+            openNewRecordModal();
+        }
+
+        async function openNewRecordModal() {
+            editingRecordId = null;
+            document.getElementById('modal-title').textContent = `Insert Record into ${activeTableName}`;
+            document.getElementById('modal-submit-btn').textContent = 'Insert Record';
+
+            // Ensure schema is loaded
+            if (!activeTablePayload || activeTablePayload.table_name !== activeTableName) {
+                const res = await fetch(`/api/admin/tables/${activeTableName}`);
+                activeTablePayload = await res.json();
+            }
+
+            renderModalFormFields({});
+            document.getElementById('record-modal').style.display = 'flex';
+        }
+
+        async function openEditRecordModal(recordId) {
+            editingRecordId = recordId;
+            document.getElementById('modal-title').textContent = `Edit Record #${recordId} in ${activeTableName}`;
+            document.getElementById('modal-submit-btn').textContent = 'Update Record';
+
+            const pk = activeTablePayload.primary_key;
+            const rowData = activeTablePayload.rows.find(r => r[pk] == recordId) || {};
+
+            renderModalFormFields(rowData);
+            document.getElementById('record-modal').style.display = 'flex';
+        }
+
+        function renderModalFormFields(initialData) {
+            const container = document.getElementById('modal-form-fields');
+            const cols = activeTablePayload.columns;
+            const pk = activeTablePayload.primary_key;
+
+            container.innerHTML = '';
+
+            cols.forEach(c => {
+                if (c.name === pk && !editingRecordId) return; // Skip auto-increment PK on insert
+
+                const row = document.createElement('div');
+                row.className = 'form-row';
+
+                const label = document.createElement('label');
+                label.innerHTML = `${c.name} <span style="color: var(--accent-purple); font-size: 10px;">(${c.type})</span>`;
+                row.appendChild(label);
+
+                let input;
+                const val = initialData[c.name] !== undefined && initialData[c.name] !== null ? initialData[c.name] : '';
+
+                if (c.name === pk && editingRecordId) {
+                    input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = val;
+                    input.disabled = true;
+                } else if (c.name === 'is_admin' || c.name === 'is_bill' || c.name === 'is_paid') {
+                    input = document.createElement('select');
+                    input.name = c.name;
+                    input.innerHTML = `
+                        <option value="1" ${val == 1 ? 'selected' : ''}>Yes (1)</option>
+                        <option value="0" ${val == 0 ? 'selected' : ''}>No (0)</option>
+                    `;
+                } else if (c.name === 'status' && activeTableName === 'Reminders') {
+                    input = document.createElement('select');
+                    input.name = c.name;
+                    input.innerHTML = `
+                        <option value="pending" ${val === 'pending' ? 'selected' : ''}>pending</option>
+                        <option value="paid" ${val === 'paid' ? 'selected' : ''}>paid</option>
+                    `;
+                } else if (c.type.includes('date')) {
+                    input = document.createElement('input');
+                    input.type = 'date';
+                    input.name = c.name;
+                    input.value = val;
+                } else if (c.type.includes('time')) {
+                    input = document.createElement('input');
+                    input.type = 'time';
+                    input.name = c.name;
+                    input.value = val;
+                } else if (c.type.includes('int') || c.type.includes('decimal')) {
+                    input = document.createElement('input');
+                    input.type = 'number';
+                    input.step = c.type.includes('decimal') ? '0.01' : '1';
+                    input.name = c.name;
+                    input.value = val;
+                } else if (c.type.includes('text')) {
+                    input = document.createElement('textarea');
+                    input.rows = 2;
+                    input.name = c.name;
+                    input.value = val;
+                } else {
+                    input = document.createElement('input');
+                    input.type = 'text';
+                    input.name = c.name;
+                    input.value = val;
+                }
+
+                row.appendChild(input);
+                container.appendChild(row);
+            });
+        }
+
+        function closeRecordModal() {
+            document.getElementById('record-modal').style.display = 'none';
+        }
+
+        async function submitRecordModal() {
+            const form = document.getElementById('record-form');
+            const formData = {};
+
+            form.querySelectorAll('input, select, textarea').forEach(el => {
+                if (el.name && !el.disabled) {
+                    formData[el.name] = el.value;
+                }
+            });
+
+            try {
+                let url = `/api/db/tables/${activeTableName}`;
+                let method = 'POST';
+
+                if (editingRecordId) {
+                    url = `/api/db/tables/${activeTableName}/${editingRecordId}`;
+                    method = 'PUT';
+                }
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                const resData = await res.json();
+                if (res.ok) {
+                    closeRecordModal();
+                    await loadStudioHealth();
+                    await loadExplorerTable(activeTableName);
+                } else {
+                    alert('Error: ' + (resData.error || 'Failed to save record'));
+                }
+            } catch (err) {
+                console.error(err);
+                alert('Request failed');
+            }
+        }
+
+        // Global Refresh
+        async function refreshStudioData() {
+            const icon = document.getElementById('refresh-icon');
+            if (icon) icon.classList.add('fa-spin');
+            await loadStudioHealth();
+            if (document.getElementById('view-explorer').classList.contains('active')) {
+                await loadExplorerTable(activeTableName);
+            }
+            if (icon) setTimeout(() => icon.classList.remove('fa-spin'), 500);
+        }
+
+        // Initial Load
+        document.addEventListener('DOMContentLoaded', async () => {
+            const savedTheme = localStorage.getItem('studio_theme');
+            if (savedTheme === 'light') document.body.classList.add('theme-light');
+            await loadStudioHealth();
+        });
+    </script>
+</body>
+
+</html>

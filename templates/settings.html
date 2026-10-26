@@ -4,10 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings - Sanchaya</title>
+    <title>Settings - Yadav & Jain Company</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <script src="{{ url_for('static', filename='i18n.js') }}"></script>
     <style>
         .settings-container {
@@ -160,35 +160,74 @@
     <div class="dashboard">
         <aside class="sidebar">
             <div class="logo">
-                <i class="fa-solid fa-wallet"></i>
-                <h2>Sanchaya</h2>
+                <div class="logo-badge">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div class="logo-title-group">
+                    <h2>Yadav & Jain Company</h2>
+                    <span class="logo-tagline">Wealth Management</span>
+                </div>
             </div>
             <nav>
+                <div class="nav-section-label">Overview</div>
                 <a href="/" data-i18n="nav_dashboard"><i class="fa-solid fa-chart-pie"></i> <span class="i18n-text">Dashboard</span></a>
                 <a href="/transactions" data-i18n="nav_transactions"><i class="fa-solid fa-money-bill-transfer"></i> <span class="i18n-text">Transactions</span></a>
                 <a href="/calendar" data-i18n="nav_calendar"><i class="fa-solid fa-calendar-days"></i> <span class="i18n-text">Calendar</span></a>
+                
+                <div class="nav-section-label">Analytics & Config</div>
                 <a href="/reports" data-i18n="nav_reports"><i class="fa-solid fa-chart-line"></i> <span class="i18n-text">Reports</span></a>
                 <a href="/settings" class="active" data-i18n="nav_settings"><i class="fa-solid fa-gear"></i> <span class="i18n-text">Settings</span></a>
             </nav>
+            <div class="sidebar-footer">
+                <div class="sidebar-user-card" onclick="window.location.href='/settings'">
+                    <div class="avatar" style="width: 28px; height: 28px; font-size: 11px;">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                        <span style="font-size: 12px; font-weight: 700;">MySQL 8.0</span>
+                        <span style="font-size: 10px; color: var(--text-muted);">Secure Connection</span>
+                    </div>
+                    <span class="status-beacon"></span>
+                </div>
+            </div>
         </aside>
 
         <main class="main-content">
             <header class="topbar">
-                <div class="search-bar">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" placeholder="Search..." data-i18n="search_placeholder">
-                </div>
-                <div class="user-profile">
-                    <div class="avatar">
-                        <i class="fa-solid fa-user"></i>
+                <div class="topbar-left">
+                    <div class="search-bar">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" placeholder="Search preferences..." data-i18n="search_placeholder">
+                        <span class="search-shortcut">⌘K</span>
                     </div>
-                    <span id="topbar-username">User</span>
+                </div>
+                <div class="topbar-right">
+                    <button class="topbar-icon-btn" id="theme-toggle-btn" onclick="toggleThemeQuick()" title="Switch Light/Dark Theme">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    <div class="topbar-icon-btn" title="System Notifications">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="notification-badge"></span>
+                    </div>
+                    <div class="user-profile" onclick="window.location.href='/settings'">
+                        <div class="avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="user-meta">
+                            <span id="topbar-username" class="user-name">User</span>
+                            <span class="user-role">Personal Tier</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-right user-chevron"></i>
+                    </div>
                 </div>
             </header>
 
             <div class="content">
                 <div class="header-action">
-                    <h1 data-i18n="set_title">Settings</h1>
+                    <div class="header-title-wrap">
+                        <h1 data-i18n="set_title">Account & Preferences</h1>
+                        <span class="header-subtitle">Manage personal profile details, currencies, and appearance themes</span>
+                    </div>
                     <button class="btn-danger" onclick="logout()" data-i18n="logout_btn"><i class="fa-solid fa-right-from-bracket"></i> <span class="i18n-text">Logout</span></button>
                 </div>
 
@@ -271,6 +310,20 @@
                                         <option value="blue" data-i18n="set_theme_blue">Ocean Blue</option>
                                         <option value="green" data-i18n="set_theme_green">Forest Green</option>
                                     </select>
+                                    <div style="display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap;">
+                                        <button type="button" onclick="selectThemeSwatch('light')" style="flex: 1; min-width: 65px; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--border); background: #FFFFFF; color: #0F172A; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; box-shadow: var(--shadow-sm);">
+                                            <span style="width: 10px; height: 10px; border-radius: 50%; background: #4F46E5;"></span> Light
+                                        </button>
+                                        <button type="button" onclick="selectThemeSwatch('dark')" style="flex: 1; min-width: 65px; padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: #0B0F19; color: #F8FAFC; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; box-shadow: var(--shadow-sm);">
+                                            <span style="width: 10px; height: 10px; border-radius: 50%; background: #6366F1;"></span> Dark
+                                        </button>
+                                        <button type="button" onclick="selectThemeSwatch('blue')" style="flex: 1; min-width: 65px; padding: 8px 10px; border-radius: 10px; border: 1px solid #BAE6FD; background: #F0F9FF; color: #0C4A6E; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; box-shadow: var(--shadow-sm);">
+                                            <span style="width: 10px; height: 10px; border-radius: 50%; background: #0284C7;"></span> Blue
+                                        </button>
+                                        <button type="button" onclick="selectThemeSwatch('green')" style="flex: 1; min-width: 65px; padding: 8px 10px; border-radius: 10px; border: 1px solid #A7F3D0; background: #ECFDF5; color: #064E3B; font-size: 11px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; box-shadow: var(--shadow-sm);">
+                                            <span style="width: 10px; height: 10px; border-radius: 50%; background: #059669;"></span> Green
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="form-group toggle-container">
                                     <div>
@@ -445,11 +498,24 @@
         }
 
         function applyTheme(theme) {
-            document.body.className = ''; // reset
-            if (theme !== 'light') {
+            document.documentElement.className = '';
+            document.body.className = '';
+            if (theme && theme !== 'light') {
+                document.documentElement.classList.add(`theme-${theme}`);
+                document.documentElement.setAttribute('data-theme', theme);
                 document.body.classList.add(`theme-${theme}`);
+                document.body.setAttribute('data-theme', theme);
+            } else {
+                document.documentElement.removeAttribute('data-theme');
+                document.body.removeAttribute('data-theme');
             }
-            localStorage.setItem('userTheme', theme);
+            localStorage.setItem('userTheme', theme || 'light');
+        }
+
+        function selectThemeSwatch(theme) {
+            const selectEl = document.getElementById('set-theme');
+            if (selectEl) selectEl.value = theme;
+            applyTheme(theme);
         }
 
         window.onload = loadSettings;

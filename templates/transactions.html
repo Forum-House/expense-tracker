@@ -4,10 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transactions - Sanchaya</title>
+    <title>Transactions - Yadav & Jain Company</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='vendor/fontawesome/css/all.min.css') }}">
     <script src="{{ url_for('static', filename='i18n.js') }}"></script>
     <script>
         const savedTheme = localStorage.getItem('userTheme');
@@ -121,35 +121,74 @@
     <div class="dashboard">
         <aside class="sidebar">
             <div class="logo">
-                <i class="fa-solid fa-wallet"></i>
-                <h2>Sanchaya</h2>
+                <div class="logo-badge">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div class="logo-title-group">
+                    <h2>Yadav & Jain Company</h2>
+                    <span class="logo-tagline">Wealth Management</span>
+                </div>
             </div>
             <nav>
+                <div class="nav-section-label">Overview</div>
                 <a href="/" data-i18n="nav_dashboard"><i class="fa-solid fa-chart-pie"></i> <span class="i18n-text">Dashboard</span></a>
                 <a href="/transactions" class="active" data-i18n="nav_transactions"><i class="fa-solid fa-money-bill-transfer"></i> <span class="i18n-text">Transactions</span></a>
                 <a href="/calendar" data-i18n="nav_calendar"><i class="fa-solid fa-calendar-days"></i> <span class="i18n-text">Calendar</span></a>
+                
+                <div class="nav-section-label">Analytics & Config</div>
                 <a href="/reports" data-i18n="nav_reports"><i class="fa-solid fa-chart-line"></i> <span class="i18n-text">Reports</span></a>
                 <a href="/settings" data-i18n="nav_settings"><i class="fa-solid fa-gear"></i> <span class="i18n-text">Settings</span></a>
             </nav>
+            <div class="sidebar-footer">
+                <div class="sidebar-user-card" onclick="window.location.href='/settings'">
+                    <div class="avatar" style="width: 28px; height: 28px; font-size: 11px;">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div style="display: flex; flex-direction: column; line-height: 1.2;">
+                        <span style="font-size: 12px; font-weight: 700;">MySQL 8.0</span>
+                        <span style="font-size: 10px; color: var(--text-muted);">Secure Connection</span>
+                    </div>
+                    <span class="status-beacon"></span>
+                </div>
+            </div>
         </aside>
 
         <main class="main-content">
             <header class="topbar">
-                <div class="search-bar">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" placeholder="Search transactions..." data-i18n="search_placeholder">
-                </div>
-                <div class="user-profile">
-                    <div class="avatar">
-                        <i class="fa-solid fa-user"></i>
+                <div class="topbar-left">
+                    <div class="search-bar">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" placeholder="Search transactions..." data-i18n="search_placeholder">
+                        <span class="search-shortcut">⌘K</span>
                     </div>
-                    <span id="topbar-username">Shravani</span>
+                </div>
+                <div class="topbar-right">
+                    <button class="topbar-icon-btn" id="theme-toggle-btn" onclick="toggleThemeQuick()" title="Switch Light/Dark Theme">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                    <div class="topbar-icon-btn" title="System Notifications">
+                        <i class="fa-regular fa-bell"></i>
+                        <span class="notification-badge"></span>
+                    </div>
+                    <div class="user-profile" onclick="window.location.href='/settings'">
+                        <div class="avatar">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <div class="user-meta">
+                            <span id="topbar-username" class="user-name">bhoomi</span>
+                            <span class="user-role">Administrator</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-right user-chevron"></i>
+                    </div>
                 </div>
             </header>
 
             <div class="content">
                 <div class="header-action">
-                    <h1 data-i18n="tx_title">Add Transactions</h1>
+                    <div class="header-title-wrap">
+                        <h1 data-i18n="tx_title">Record Transactions</h1>
+                        <span class="header-subtitle">Easily log income streams, daily spendings, and recurring bills</span>
+                    </div>
                 </div>
 
                 <div class="forms-container">
@@ -199,7 +238,17 @@
                             </div>
                             <button type="submit" class="btn-danger" data-i18n="tx_btn_add_expense">Add Expense</button>
                         </form>
+                </div>
+
+                <!-- Recent Entries Section -->
+                <div class="card" style="margin-top: 28px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h2 style="margin-bottom: 0;"><i class="fa-solid fa-clock-rotate-left" style="color: var(--primary);"></i> Recent Records</h2>
+                        <span style="font-size: 13px; color: var(--text-muted); font-weight: 500;">Latest entries from your wallet</span>
                     </div>
+                    <ul id="tx-recent-list" class="transaction-list">
+                        <li class="tx-item" style="justify-content: center; color: var(--text-muted); border: none;">Loading records...</li>
+                    </ul>
                 </div>
             </div>
         </main>
@@ -264,6 +313,7 @@
                 if (res.ok) {
                     showToast('Success!', 'Income added successfully!', 'success');
                     document.getElementById('income-form').reset();
+                    loadRecentEntries();
                 } else {
                     const data = await res.json();
                     showToast('Error', data.error || data.message, 'warning');
@@ -317,6 +367,7 @@
                     document.getElementById('expense-form').reset();
                     document.getElementById('custom-category-group').style.display = 'none';
                     document.getElementById('custom-category').required = false;
+                    loadRecentEntries();
                 } else {
                     const data = await res.json();
                     showToast('Error', data.error || data.message, 'warning');
@@ -326,6 +377,47 @@
                 showToast('Error', 'Failed to add expense.', 'warning');
             }
         });
+
+        async function loadRecentEntries() {
+            try {
+                const res = await fetch(`/all-expenses/${USER_ID}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    const list = document.getElementById('tx-recent-list');
+                    list.innerHTML = '';
+                    if (!data || data.length === 0) {
+                        list.innerHTML = '<li class="tx-item" style="justify-content: center; color: var(--text-muted); border: none;">No transactions recorded yet.</li>';
+                        return;
+                    }
+                    data.slice(0, 8).forEach(item => {
+                        const li = document.createElement('li');
+                        li.className = 'tx-item';
+                        const isIncome = item.source !== undefined;
+                        const title = isIncome ? item.source : item.category;
+                        const iconClass = isIncome ? 'fa-arrow-trend-up' : 'fa-receipt';
+                        const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Recent';
+                        
+                        li.innerHTML = `
+                            <div class="tx-info">
+                                <div class="tx-icon"><i class="fa-solid ${iconClass}"></i></div>
+                                <div>
+                                    <h4>${title}</h4>
+                                    <span class="tx-date">${dateStr}</span>
+                                </div>
+                            </div>
+                            <div class="tx-amount ${isIncome ? 'positive' : 'negative'}">
+                                ${isIncome ? '+' : '-'}${sym}${item.amount}
+                            </div>
+                        `;
+                        list.appendChild(li);
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to load recent entries:", err);
+            }
+        }
+
+        loadRecentEntries();
     </script>
 </body>
 
